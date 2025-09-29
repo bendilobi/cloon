@@ -1,0 +1,53 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "elmPackages.lamdera@1.3.1": {
+      "last_modified": "2024-11-03T14:18:04Z",
+      "resolved": "github:NixOS/nixpkgs/4ae2e647537bcdbb82265469442713d066675275#elmPackages.lamdera",
+      "source": "devbox-search",
+      "version": "1.3.1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/02s0b6nx56z5rivzql1mfsd0lxrljd0a-lamdera-1.3.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/02s0b6nx56z5rivzql1mfsd0lxrljd0a-lamdera-1.3.1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/yf516jbvb8qz1959gdnm2wivk01cd18q-lamdera-1.3.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/yf516jbvb8qz1959gdnm2wivk01cd18q-lamdera-1.3.1"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/0mqxdd2rvx5w0qhrsqnyhhwfs3rnn1n2-lamdera-1.3.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/0mqxdd2rvx5w0qhrsqnyhhwfs3rnn1n2-lamdera-1.3.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/y7dljrill72gyndnkhj4mqh9iwh264ak-lamdera-1.3.1",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/y7dljrill72gyndnkhj4mqh9iwh264ak-lamdera-1.3.1"
+        }
+      }
+    }
+  }
+}
