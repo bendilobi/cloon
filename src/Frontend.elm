@@ -11,7 +11,8 @@ import Element.Background as Bg
 import Element.Font as Font exposing (color)
 import Element.Input as Input
 import Html exposing (Html)
-import Lamdera
+import Lamdera exposing (sendToBackend)
+import Platform.Cmd as Cmd
 import String.Format
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
@@ -100,8 +101,12 @@ update msg model =
             )
 
         DateToggled ->
-            ( { model | dateHidden = not model.dateHidden }
-            , Cmd.none
+            let
+                newHidden =
+                    not model.dateHidden
+            in
+            ( { model | dateHidden = newHidden }
+            , sendToBackend <| DateHiddenChanged newHidden
             )
 
 
@@ -118,6 +123,11 @@ updateFromBackend msg model =
     case msg of
         NoOpToFrontend ->
             ( model, Cmd.none )
+
+        NewDateHidden isHidden ->
+            ( { model | dateHidden = isHidden }
+            , Cmd.none
+            )
 
 
 colors : { foreground : Ui.Color, background : Ui.Color }
