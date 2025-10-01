@@ -50,6 +50,7 @@ init url key =
       , time = Time.millisToPosix 0
       , size = 200
       , dateHidden = True
+      , clients = []
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -110,14 +111,6 @@ update msg model =
             )
 
 
-subscriptions : Model -> Sub FrontendMsg
-subscriptions model =
-    Sub.batch
-        [ Time.every 1000 Tick
-        , Browser.Events.onResize Resized
-        ]
-
-
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
@@ -128,6 +121,17 @@ updateFromBackend msg model =
             ( { model | dateHidden = isHidden }
             , Cmd.none
             )
+
+        ClientsChanged clients ->
+            ( { model | clients = clients }, Cmd.none )
+
+
+subscriptions : Model -> Sub FrontendMsg
+subscriptions model =
+    Sub.batch
+        [ Time.every 1000 Tick
+        , Browser.Events.onResize Resized
+        ]
 
 
 colors : { foreground : Ui.Color, background : Ui.Color }
@@ -169,7 +173,8 @@ view model =
                 , Ui.spacing (model.size * 0.08 |> round)
                 , Ui.centerY
                 ]
-                [ Input.button
+                [ Ui.el [ Font.color <| Ui.rgb 1 1 1 ] <| Ui.text <| String.fromInt <| List.length model.clients
+                , Input.button
                     [ Ui.centerX ]
                     { label =
                         Ui.el [] <|

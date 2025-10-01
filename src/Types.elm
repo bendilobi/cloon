@@ -15,12 +15,14 @@ type alias FrontendModel =
     , time : Time.Posix
     , size : Float
     , dateHidden : Bool
+    , clients : List String
     }
 
 
 type alias BackendModel =
     { message : String
     , dateHidden : Bool
+    , clientIds : List String
     }
 
 
@@ -48,3 +50,4 @@ type BackendMsg
 type ToFrontend
     = NoOpToFrontend
     | NewDateHidden Bool
+    | ClientsChanged (List String)

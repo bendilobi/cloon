@@ -1,6 +1,6 @@
 module Backend exposing (..)
 
-import Lamdera exposing (ClientId, SessionId, broadcast, sendToFrontend)
+import Lamdera exposing (ClientId, SessionId, broadcast, onConnect, sendToFrontend)
 import Types exposing (..)
 
 
@@ -19,7 +19,10 @@ app =
 
 init : ( Model, Cmd BackendMsg )
 init =
-    ( { message = "Hello!", dateHidden = True }
+    ( { message = "Hello!"
+      , dateHidden = True
+      , clientIds = []
+      }
     , Cmd.none
     )
 
@@ -31,7 +34,12 @@ update msg model =
             ( model, Cmd.none )
 
         ClientConnected sessionId clientId ->
-            ( model, sendToFrontend clientId <| NewDateHidden model.dateHidden )
+            ( { model | clientIds = clientId :: model.clientIds }
+            , Cmd.batch
+                [ sendToFrontend clientId <| NewDateHidden model.dateHidden
+                , broadcast <| ClientsChanged model.clientIds
+                ]
+            )
 
 
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
@@ -44,3 +52,8 @@ updateFromFrontend sessionId clientId msg model =
             ( { model | dateHidden = isHidden }
             , broadcast <| NewDateHidden isHidden
             )
+
+
+subscriptions : Model -> Sub BackendMsg
+subscriptions model =
+    Lamdera.onConnect ClientConnected
