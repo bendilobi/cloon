@@ -13,7 +13,7 @@ app =
         { init = init
         , update = update
         , updateFromFrontend = updateFromFrontend
-        , subscriptions = \m -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -21,7 +21,6 @@ init : ( Model, Cmd BackendMsg )
 init =
     ( { message = "Hello!"
       , dateHidden = True
-      , clientIds = []
       }
     , Cmd.none
     )
@@ -34,10 +33,9 @@ update msg model =
             ( model, Cmd.none )
 
         ClientConnected sessionId clientId ->
-            ( { model | clientIds = clientId :: model.clientIds }
+            ( model
             , Cmd.batch
                 [ sendToFrontend clientId <| NewDateHidden model.dateHidden
-                , broadcast <| ClientsChanged model.clientIds
                 ]
             )
 
@@ -56,4 +54,4 @@ updateFromFrontend sessionId clientId msg model =
 
 subscriptions : Model -> Sub BackendMsg
 subscriptions model =
-    Lamdera.onConnect ClientConnected
+    Sub.batch [ Lamdera.onConnect ClientConnected ]

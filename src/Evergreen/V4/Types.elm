@@ -1,15 +1,15 @@
-module Types exposing (..)
+module Evergreen.V4.Types exposing (..)
 
-import Browser exposing (UrlRequest)
+import Browser
 import Browser.Dom
-import Browser.Navigation exposing (Key)
-import Lamdera exposing (ClientId, SessionId)
+import Browser.Navigation
+import Lamdera
 import Time
-import Url exposing (Url)
+import Url
 
 
 type alias FrontendModel =
-    { key : Key
+    { key : Browser.Navigation.Key
     , message : String
     , zone : Time.Zone
     , time : Time.Posix
@@ -25,8 +25,8 @@ type alias BackendModel =
 
 
 type FrontendMsg
-    = UrlClicked UrlRequest
-    | UrlChanged Url
+    = UrlClicked Browser.UrlRequest
+    | UrlChanged Url.Url
     | NoOpFrontendMsg
     | Tick Time.Posix
     | AdjustTimeZone Time.Zone
@@ -42,7 +42,7 @@ type ToBackend
 
 type BackendMsg
     = NoOpBackendMsg
-    | ClientConnected SessionId ClientId
+    | ClientConnected Lamdera.SessionId Lamdera.ClientId
 
 
 type ToFrontend

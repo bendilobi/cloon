@@ -50,7 +50,6 @@ init url key =
       , time = Time.millisToPosix 0
       , size = 200
       , dateHidden = True
-      , clients = []
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -122,9 +121,6 @@ updateFromBackend msg model =
             , Cmd.none
             )
 
-        ClientsChanged clients ->
-            ( { model | clients = clients }, Cmd.none )
-
 
 subscriptions : Model -> Sub FrontendMsg
 subscriptions model =
@@ -173,8 +169,7 @@ view model =
                 , Ui.spacing (model.size * 0.08 |> round)
                 , Ui.centerY
                 ]
-                [ Ui.el [ Font.color <| Ui.rgb 1 1 1 ] <| Ui.text <| String.fromInt <| List.length model.clients
-                , Input.button
+                [ Input.button
                     [ Ui.centerX ]
                     { label =
                         Ui.el [] <|
