@@ -8,9 +8,11 @@ import Color
 import Color.Convert
 import Element as Ui
 import Element.Background as Bg
+import Element.Events as Events
 import Element.Font as Font exposing (color)
 import Element.Input as Input
 import Html exposing (Html)
+import Html.Attributes
 import Lamdera exposing (sendToBackend)
 import Platform.Cmd as Cmd
 import String.Format
@@ -50,6 +52,7 @@ init url key =
       , time = Time.millisToPosix 0
       , size = 200
       , dateHidden = True
+      , mouseOver = False
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -109,6 +112,11 @@ update msg model =
             , sendToBackend <| DateHiddenChanged newHidden
             )
 
+        MouseOver over ->
+            ( { model | mouseOver = over }
+            , Cmd.none
+            )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -162,6 +170,8 @@ view model =
             [ Ui.width Ui.fill
             , Ui.height Ui.fill
             , Bg.color colors.background
+            , Events.onMouseEnter <| MouseOver True
+            , Events.onMouseLeave <| MouseOver False
             ]
         <|
             Ui.column
@@ -169,36 +179,44 @@ view model =
                 , Ui.spacing (model.size * 0.08 |> round)
                 , Ui.centerY
                 ]
-                [ Input.button
-                    [ Ui.centerX ]
+                [ Ui.el [ Ui.centerX ] <|
+                    viewClock model (model.size * 0.6)
+                , let
+                    blur =
+                        if model.dateHidden && model.mouseOver then
+                            "17"
+
+                        else
+                            "0"
+                  in
+                  Input.button [ Ui.width Ui.fill ]
                     { label =
-                        Ui.el [] <|
-                            viewClock model (model.size * 0.6)
+                        Ui.el
+                            [ Ui.transparent <| model.dateHidden && not model.mouseOver
+                            , Ui.htmlAttribute <| Html.Attributes.style "filter" <| "blur(" ++ blur ++ "px)"
+                            , Font.center
+                            , Font.color <| colors.foreground
+                            , Font.size <| (model.size * 0.07 |> round)
+                            , Font.family
+                                [ Font.external
+                                    { name = "Pompiere"
+                                    , url = "https://fonts.googleapis.com/css2?family=Pompiere"
+                                    }
+
+                                --   Font.external
+                                --     { name = "National Park"
+                                --     , url = "https://fonts.googleapis.com/css2?family=National+Park:wght@200..800"
+                                --     }
+                                , Font.typeface "Verdana"
+                                , Font.sansSerif
+                                ]
+                            , Ui.centerX
+                            ]
+                        <|
+                            Ui.text <|
+                                viewDate model
                     , onPress = Just DateToggled
                     }
-                , Ui.el
-                    [ Ui.transparent model.dateHidden
-                    , Font.center
-                    , Font.color <| colors.foreground
-                    , Font.size <| (model.size * 0.07 |> round)
-                    , Font.family
-                        [ Font.external
-                            { name = "Pompiere"
-                            , url = "https://fonts.googleapis.com/css2?family=Pompiere"
-                            }
-
-                        --   Font.external
-                        --     { name = "National Park"
-                        --     , url = "https://fonts.googleapis.com/css2?family=National+Park:wght@200..800"
-                        --     }
-                        , Font.typeface "Verdana"
-                        , Font.sansSerif
-                        ]
-                    , Ui.centerX
-                    ]
-                  <|
-                    Ui.text <|
-                        viewDate model
                 ]
 
 
