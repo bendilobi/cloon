@@ -184,7 +184,10 @@ view model =
                 , let
                     blur =
                         if model.dateHidden && model.mouseOver then
-                            "17"
+                            -- "17"
+                            model.size
+                                * 0.03
+                                |> String.fromFloat
 
                         else
                             "0"
