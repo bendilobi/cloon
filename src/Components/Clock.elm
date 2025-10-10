@@ -3,6 +3,7 @@ module Components.Clock exposing (new, view)
 import Color
 import Color.Convert
 import Element as Ui exposing (Element)
+import SizeRelations exposing (SizeRelation(..))
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time
@@ -13,8 +14,8 @@ type Clock
         { size : Float
         , zone : Time.Zone
         , now : Time.Posix
-        , background : Ui.Color
-        , foreground : Ui.Color
+        , handColor : Ui.Color
+        , faceColor : Ui.Color
         }
 
 
@@ -22,8 +23,8 @@ new :
     { size : Float
     , zone : Time.Zone
     , now : Time.Posix
-    , background : Ui.Color
-    , foreground : Ui.Color
+    , handColor : Ui.Color
+    , faceColor : Ui.Color
     }
     -> Clock
 new props =
@@ -31,8 +32,8 @@ new props =
         { size = props.size
         , zone = props.zone
         , now = props.now
-        , background = props.background
-        , foreground = props.foreground
+        , handColor = props.handColor
+        , faceColor = props.faceColor
         }
 
 
@@ -63,16 +64,16 @@ view (Settings settings) =
             settings.size / 2
 
         radiusStr =
-            settings.size / 2 |> String.fromFloat
+            radius |> String.fromFloat
 
-        handColor =
-            settings.background
+        relSize =
+            SizeRelations.size settings.size
 
         handWidth =
-            settings.size * 0.033
+            relSize HandWidth
 
         quarterLineWidth =
-            settings.size * 0.01
+            relSize QuarterLineWidth
     in
     svg
         [ viewBox <| "0 0 " ++ sizeStr ++ " " ++ sizeStr
@@ -83,15 +84,15 @@ view (Settings settings) =
             [ cx radiusStr
             , cy radiusStr
             , r radiusStr
-            , fill <| colorToHex <| settings.foreground
+            , fill <| colorToHex <| settings.faceColor
             ]
             []
-        , viewQuarterLine handColor quarterLineWidth radius 0.25
-        , viewQuarterLine handColor quarterLineWidth radius 0.5
-        , viewQuarterLine handColor quarterLineWidth radius 0.75
-        , viewQuarterLine handColor quarterLineWidth radius 1
-        , viewHand handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
-        , viewHand handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
+        , viewQuarterLine settings.handColor quarterLineWidth radius 0.25
+        , viewQuarterLine settings.handColor quarterLineWidth radius 0.5
+        , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
+        , viewQuarterLine settings.handColor quarterLineWidth radius 1
+        , viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
+        , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
         ]
         |> Ui.html
 

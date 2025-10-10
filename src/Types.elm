@@ -3,26 +3,24 @@ module Types exposing (..)
 import Browser exposing (UrlRequest)
 import Browser.Dom
 import Browser.Navigation exposing (Key)
-import Element exposing (mouseOver)
 import Lamdera exposing (ClientId, SessionId)
+import SizeRelations
 import Time
 import Url exposing (Url)
 
 
 type alias FrontendModel =
     { key : Key
-    , message : String
     , zone : Time.Zone
     , time : Time.Posix
-    , size : Float
+    , relSize : SizeRelations.SizeRelation -> Float
     , dateHidden : Bool
     , mouseOver : Bool
     }
 
 
 type alias BackendModel =
-    { message : String
-    , dateHidden : Bool
+    { dateHidden : Bool
     }
 
 

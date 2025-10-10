@@ -17,6 +17,7 @@ import Html exposing (Html)
 import Html.Attributes
 import Lamdera exposing (sendToBackend)
 import Platform.Cmd as Cmd
+import SizeRelations as Rel exposing (SizeRelation(..))
 import String.Format
 import Task
 import Time
@@ -47,10 +48,9 @@ app =
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
     ( { key = key
-      , message = "Welcome to Lamdera! You're looking at the auto-generated base implementation. Check out src/Frontend.elm to start coding!"
       , zone = Time.utc
       , time = Time.millisToPosix 0
-      , size = 200
+      , relSize = Rel.size 200
       , dateHidden = True
       , mouseOver = False
       }
@@ -94,12 +94,12 @@ update msg model =
             )
 
         ViewportReceived { viewport } ->
-            ( { model | size = Basics.min viewport.width viewport.height }
+            ( { model | relSize = Rel.size <| Basics.min viewport.width viewport.height }
             , Cmd.none
             )
 
         Resized width height ->
-            ( { model | size = Basics.min width height |> toFloat }
+            ( { model | relSize = Rel.size <| toFloat <| Basics.min width height }
             , Cmd.none
             )
 
@@ -168,16 +168,16 @@ view model =
         <|
             Ui.column
                 [ Ui.width Ui.fill
-                , Ui.spacing (model.size * 0.08 |> round)
+                , Ui.spacing (model.relSize MainSpacing |> round)
                 , Ui.centerY
                 ]
                 [ Ui.el [ Ui.centerX ]
                     (Clock.new
-                        { size = model.size * 0.6
+                        { size = model.relSize Clock
                         , zone = model.zone
                         , now = model.time
-                        , foreground = colors.foreground
-                        , background = colors.background
+                        , faceColor = colors.foreground
+                        , handColor = colors.background
                         }
                         |> Clock.view
                     )
@@ -185,8 +185,7 @@ view model =
                     blur =
                         if model.dateHidden && model.mouseOver then
                             -- "17"
-                            model.size
-                                * 0.03
+                            model.relSize DateBlur
                                 |> String.fromFloat
 
                         else
@@ -199,7 +198,7 @@ view model =
                             , Ui.htmlAttribute <| Html.Attributes.style "filter" <| "blur(" ++ blur ++ "px)"
                             , Font.center
                             , Font.color <| colors.foreground
-                            , Font.size <| (model.size * 0.07 |> round)
+                            , Font.size <| (model.relSize DateFont |> round)
                             , Font.family
                                 [ Font.external
                                     { name = "Pompiere"

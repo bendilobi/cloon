@@ -19,8 +19,7 @@ app =
 
 init : ( Model, Cmd BackendMsg )
 init =
-    ( { message = "Hello!"
-      , dateHidden = True
+    ( { dateHidden = True
       }
     , Cmd.none
     )
@@ -54,4 +53,4 @@ updateFromFrontend sessionId clientId msg model =
 
 subscriptions : Model -> Sub BackendMsg
 subscriptions model =
-    Sub.batch [ Lamdera.onConnect ClientConnected ]
+    Sub.batch [ onConnect ClientConnected ]
