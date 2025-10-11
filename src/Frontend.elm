@@ -1,14 +1,12 @@
 module Frontend exposing (..)
 
--- import Svg exposing (..)
--- import Svg.Attributes exposing (..)
-
 import Browser exposing (UrlRequest(..))
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation as Nav
 import Components.Clock as Clock
-import Element as Ui
+import Dict
+import Element exposing (..)
 import Element.Background as Bg
 import Element.Events as Events
 import Element.Font as Font
@@ -18,9 +16,11 @@ import Html.Attributes
 import Lamdera exposing (sendToBackend)
 import Platform.Cmd as Cmd
 import SizeRelations as Rel exposing (SizeRelation(..))
+import String exposing (toInt)
 import String.Format
 import Task
 import Time
+import Time.Extra
 import Types exposing (..)
 import Url
 
@@ -53,6 +53,11 @@ init url key =
       , relSize = Rel.size 200
       , dateHidden = True
       , mouseOver = False
+      , schedule = Dict.empty
+      , scheduleShown = False
+      , currentHourInput = ""
+      , currentMinutesInput = ""
+      , currentDescInput = ""
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -117,6 +122,106 @@ update msg model =
             , Cmd.none
             )
 
+        ScheduleToggled ->
+            ( { model | scheduleShown = not model.scheduleShown }
+            , Cmd.none
+            )
+
+        HourInputChanged newHour ->
+            ( { model
+                | currentHourInput =
+                    case toInt newHour of
+                        Nothing ->
+                            if newHour == "" then
+                                ""
+
+                            else
+                                model.currentHourInput
+
+                        Just t ->
+                            if t >= 0 && t < 24 && String.length newHour < 3 then
+                                newHour
+
+                            else
+                                model.currentHourInput
+              }
+            , Cmd.none
+            )
+
+        MinutesInputChanged newMinutes ->
+            ( { model
+                | currentMinutesInput =
+                    case toInt newMinutes of
+                        Nothing ->
+                            if newMinutes == "" then
+                                ""
+
+                            else
+                                model.currentMinutesInput
+
+                        Just t ->
+                            if t >= 0 && t < 60 && String.length newMinutes < 3 then
+                                newMinutes
+
+                            else
+                                model.currentMinutesInput
+              }
+            , Cmd.none
+            )
+
+        DescInputChanged newDesc ->
+            ( { model
+                | currentDescInput =
+                    if String.length newDesc > 30 then
+                        model.currentDescInput
+
+                    else
+                        newDesc
+              }
+            , Cmd.none
+            )
+
+        AddEventPressed ->
+            let
+                hours =
+                    model.currentHourInput |> toInt |> Maybe.withDefault 0
+
+                minutes =
+                    model.currentMinutesInput |> toInt |> Maybe.withDefault 0
+
+                currentTimeParts =
+                    Time.Extra.posixToParts model.zone model.time
+
+                eventMillis =
+                    Time.Extra.partsToPosix model.zone
+                        { currentTimeParts
+                            | hour = hours
+                            , minute = minutes
+                            , second = 0
+                            , millisecond = 0
+                        }
+                        |> (if hours < currentTimeParts.hour then
+                                Time.Extra.add Time.Extra.Day 1 model.zone
+
+                            else
+                                identity
+                           )
+                        |> Time.posixToMillis
+            in
+            ( { model
+                | schedule = Dict.insert eventMillis model.currentDescInput model.schedule
+                , currentHourInput = ""
+                , currentMinutesInput = ""
+                , currentDescInput = ""
+              }
+            , Cmd.none
+            )
+
+        DeleteEventPressed millis ->
+            ( { model | schedule = Dict.remove millis model.schedule }
+            , Cmd.none
+            )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -138,92 +243,201 @@ subscriptions model =
         ]
 
 
-colors : { foreground : Ui.Color, background : Ui.Color }
+colors : { foreground : Color, background : Color }
 colors =
-    { foreground = Ui.rgb255 241 241 230
-    , background = Ui.rgb255 21 35 65
+    { foreground = rgb255 241 241 230
+    , background = rgb255 21 35 65
     }
 
 
 view : Model -> Html FrontendMsg
 view model =
-    Ui.layoutWith
+    layoutWith
         { options =
-            [ Ui.focusStyle
+            [ focusStyle
                 { borderColor = Nothing
                 , backgroundColor = Nothing
                 , shadow = Nothing
                 }
             ]
         }
-        []
+        [ Bg.color colors.background
+        , Events.onMouseEnter <| MouseOver True
+        , Events.onMouseLeave <| MouseOver False
+        ]
     <|
-        Ui.el
-            [ Ui.width Ui.fill
-            , Ui.height Ui.fill
-            , Bg.color colors.background
-            , Events.onMouseEnter <| MouseOver True
-            , Events.onMouseLeave <| MouseOver False
+        column
+            -- main column
+            [ width fill
+            , height fill
             ]
-        <|
-            Ui.column
-                [ Ui.width Ui.fill
-                , Ui.spacing (model.relSize MainSpacing |> round)
-                , Ui.centerY
-                ]
-                [ Ui.el [ Ui.centerX ]
-                    (Clock.new
-                        { size = model.relSize Clock
-                        , zone = model.zone
-                        , now = model.time
-                        , faceColor = colors.foreground
-                        , handColor = colors.background
-                        }
-                        |> Clock.view
-                    )
-                , let
-                    blur =
-                        if model.dateHidden && model.mouseOver then
-                            -- "17"
-                            model.relSize DateBlur
-                                |> String.fromFloat
+            [ column
+                -- clock and date
+                (if model.scheduleShown then
+                    [ padding <| round <| model.relSize MoonClockPadding ]
+
+                 else
+                    [ width fill
+                    , spacing (model.relSize MainSpacing |> round)
+                    , centerY
+                    ]
+                )
+                [ Input.button
+                    [ if model.scheduleShown then
+                        paddingXY (round <| model.relSize MoonClockPadding) 0
+
+                      else
+                        centerX
+                    ]
+                    { label =
+                        el []
+                            (Clock.new
+                                { size =
+                                    model.relSize <|
+                                        if model.scheduleShown then
+                                            MoonClock
+
+                                        else
+                                            Clock
+                                , zone = model.zone
+                                , now = model.time
+                                , faceColor = colors.foreground
+                                , handColor = colors.background
+                                }
+                                |> Clock.view
+                            )
+                    , onPress = Just ScheduleToggled
+                    }
+                , Input.button [ width fill ]
+                    { label = viewDate model
+                    , onPress =
+                        if model.scheduleShown then
+                            Just ScheduleToggled
 
                         else
-                            "0"
-                  in
-                  Input.button [ Ui.width Ui.fill ]
-                    { label =
-                        Ui.el
-                            [ Ui.transparent <| model.dateHidden && not model.mouseOver
-                            , Ui.htmlAttribute <| Html.Attributes.style "filter" <| "blur(" ++ blur ++ "px)"
-                            , Font.center
-                            , Font.color <| colors.foreground
-                            , Font.size <| (model.relSize DateFont |> round)
-                            , Font.family
-                                [ Font.external
-                                    { name = "Pompiere"
-                                    , url = "https://fonts.googleapis.com/css2?family=Pompiere"
-                                    }
-
-                                --   Font.external
-                                --     { name = "National Park"
-                                --     , url = "https://fonts.googleapis.com/css2?family=National+Park:wght@200..800"
-                                --     }
-                                , Font.typeface "Verdana"
-                                , Font.sansSerif
-                                ]
-                            , Ui.centerX
-                            ]
-                        <|
-                            Ui.text <|
-                                viewDate model
-                    , onPress = Just DateToggled
+                            Just DateToggled
                     }
                 ]
+            , if model.scheduleShown then
+                column
+                    -- schedule
+                    [ width fill
+                    , height fill
+                    , Bg.color <| rgb255 0 15 8
+                    , padding <| round <| model.relSize SchedulePadding
+                    , Font.color <| colors.foreground
+                    , Font.size <| round <| model.relSize ScheduleFontSize
+                    , spacing <| round <| model.relSize ScheduleLineSpacing
+                    ]
+                    ((model.schedule
+                        |> Dict.toList
+                        |> List.map (viewEvent model)
+                     )
+                        ++ [ row
+                                [ width fill
+                                , Font.color <| rgb 0 0 0
+                                , spacing <| round <| model.relSize ScheduleLineSpacing
+                                ]
+                                [ Input.text
+                                    [ width <| px <| round <| model.relSize ScheduleFontSize * 3
+                                    ]
+                                    { onChange = HourInputChanged
+                                    , text = model.currentHourInput
+                                    , placeholder = Nothing
+                                    , label = Input.labelHidden "Hours"
+                                    }
+                                , el [ Font.color colors.foreground ] <| text ":"
+                                , Input.text
+                                    [ width <| px <| round <| model.relSize ScheduleFontSize * 3
+                                    ]
+                                    { onChange = MinutesInputChanged
+                                    , text = model.currentMinutesInput
+                                    , placeholder = Nothing
+                                    , label = Input.labelHidden "Minutes"
+                                    }
+                                , Input.text
+                                    [ width fill --<| px <| round <| model.relSize ScheduleFontSize * 15
+                                    ]
+                                    { onChange = DescInputChanged
+                                    , text = model.currentDescInput
+                                    , placeholder = Nothing
+                                    , label = Input.labelHidden "Description"
+                                    }
+                                , Input.button []
+                                    { onPress = Just AddEventPressed
+                                    , label = el [ Font.color <| colors.foreground, paddingXY 10 0 ] <| text "+"
+                                    }
+                                ]
+                           ]
+                    )
+
+              else
+                none
+            ]
 
 
-viewDate : Model -> String
+viewEvent : Model -> ( Int, String ) -> Element FrontendMsg
+viewEvent model ( millis, description ) =
+    let
+        timeParts =
+            Time.millisToPosix millis
+                |> Time.Extra.posixToParts model.zone
+    in
+    row [ spacing <| round <| model.relSize ScheduleLineSpacing ]
+        --TODO: führende 0 hinzufügen
+        [ el [] <| text <| (timeParts.hour |> String.fromInt) ++ ":" ++ (timeParts.minute |> String.fromInt) ++ "  " ++ description
+        , Input.button []
+            { onPress = Just <| DeleteEventPressed millis
+            , label = el [] <| text "x"
+            }
+        ]
+
+
+viewDate : Model -> Element msg
 viewDate model =
+    let
+        blur =
+            if model.scheduleShown || model.dateHidden && model.mouseOver then
+                model.relSize DateBlur
+                    |> String.fromFloat
+
+            else
+                "0"
+    in
+    el
+        [ transparent <| model.dateHidden && not model.mouseOver && not model.scheduleShown
+        , htmlAttribute <| Html.Attributes.style "filter" <| "blur(" ++ blur ++ "px)"
+        , Font.center
+        , Font.color <| colors.foreground
+        , Font.size <| (model.relSize DateFont |> round)
+        , moveUp <|
+            if model.scheduleShown then
+                model.relSize DateCloudShift
+
+            else
+                0
+        , Font.family
+            [ Font.external
+                { name = "Pompiere"
+                , url = "https://fonts.googleapis.com/css2?family=Pompiere"
+                }
+
+            --   Font.external
+            --     { name = "National Park"
+            --     , url = "https://fonts.googleapis.com/css2?family=National+Park:wght@200..800"
+            --     }
+            , Font.typeface "Verdana"
+            , Font.sansSerif
+            ]
+        , centerX
+        ]
+    <|
+        text <|
+            viewDateString model
+
+
+viewDateString : Model -> String
+viewDateString model =
     "{{day}}. {{month}} {{year}}"
         |> String.Format.namedValue "day"
             (Time.toDay model.zone model.time |> String.fromInt)

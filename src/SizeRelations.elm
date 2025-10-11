@@ -4,10 +4,16 @@ module SizeRelations exposing (..)
 type SizeRelation
     = MainSpacing
     | Clock
+    | MoonClock
+    | MoonClockPadding
     | HandWidth
     | QuarterLineWidth
     | DateBlur
     | DateFont
+    | DateCloudShift
+    | SchedulePadding
+    | ScheduleFontSize
+    | ScheduleLineSpacing
 
 
 size : Float -> SizeRelation -> Float
@@ -20,6 +26,12 @@ size baseSize sizeRelation =
             Clock ->
                 0.6
 
+            MoonClock ->
+                0.06
+
+            MoonClockPadding ->
+                0.05
+
             HandWidth ->
                 0.033
 
@@ -31,4 +43,16 @@ size baseSize sizeRelation =
 
             DateFont ->
                 0.07
+
+            DateCloudShift ->
+                0.03
+
+            SchedulePadding ->
+                0.1
+
+            ScheduleFontSize ->
+                0.05
+
+            ScheduleLineSpacing ->
+                0.05
           )

@@ -3,6 +3,7 @@ module Types exposing (..)
 import Browser exposing (UrlRequest)
 import Browser.Dom
 import Browser.Navigation exposing (Key)
+import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
 import SizeRelations
 import Time
@@ -16,6 +17,11 @@ type alias FrontendModel =
     , relSize : SizeRelations.SizeRelation -> Float
     , dateHidden : Bool
     , mouseOver : Bool
+    , schedule : Dict Int String
+    , scheduleShown : Bool
+    , currentHourInput : String
+    , currentMinutesInput : String
+    , currentDescInput : String
     }
 
 
@@ -34,6 +40,12 @@ type FrontendMsg
     | Resized Int Int
     | DateToggled
     | MouseOver Bool
+    | ScheduleToggled
+    | HourInputChanged String
+    | MinutesInputChanged String
+    | DescInputChanged String
+    | AddEventPressed
+    | DeleteEventPressed Int
 
 
 type ToBackend
