@@ -10,9 +10,11 @@ import Element exposing (..)
 import Element.Background as Bg
 import Element.Events as Events
 import Element.Font as Font
-import Element.Input as Input
+import Element.Input as Input exposing (focusedOnLoad)
 import Html exposing (Html)
 import Html.Attributes
+import Html.Events
+import Json.Decode as Decode
 import Lamdera exposing (sendToBackend)
 import Platform.Cmd as Cmd
 import SizeRelations as Rel exposing (SizeRelation(..))
@@ -55,8 +57,8 @@ init url key =
       , mouseOver = False
       , schedule = Dict.empty
       , scheduleShown = False
-      , currentHourInput = ""
-      , currentMinutesInput = ""
+      , currentHourInput = "00"
+      , currentMinutesInput = "00"
       , currentDescInput = ""
       }
     , Cmd.batch
@@ -210,8 +212,8 @@ update msg model =
             in
             ( { model
                 | schedule = Dict.insert eventMillis model.currentDescInput model.schedule
-                , currentHourInput = ""
-                , currentMinutesInput = ""
+                , currentHourInput = "00"
+                , currentMinutesInput = "00"
                 , currentDescInput = ""
               }
             , Cmd.none
@@ -340,6 +342,8 @@ view model =
                                 ]
                                 [ Input.text
                                     [ width <| px <| round <| model.relSize ScheduleFontSize * 3
+                                    , focusedOnLoad
+                                    , onEnter AddEventPressed
                                     ]
                                     { onChange = HourInputChanged
                                     , text = model.currentHourInput
@@ -349,6 +353,7 @@ view model =
                                 , el [ Font.color colors.foreground ] <| text ":"
                                 , Input.text
                                     [ width <| px <| round <| model.relSize ScheduleFontSize * 3
+                                    , onEnter AddEventPressed
                                     ]
                                     { onChange = MinutesInputChanged
                                     , text = model.currentMinutesInput
@@ -357,6 +362,7 @@ view model =
                                     }
                                 , Input.text
                                     [ width fill --<| px <| round <| model.relSize ScheduleFontSize * 15
+                                    , onEnter AddEventPressed
                                     ]
                                     { onChange = DescInputChanged
                                     , text = model.currentDescInput
@@ -374,6 +380,23 @@ view model =
               else
                 none
             ]
+
+
+onEnter : msg -> Element.Attribute msg
+onEnter msg =
+    Element.htmlAttribute
+        (Html.Events.on "keyup"
+            (Decode.field "key" Decode.string
+                |> Decode.andThen
+                    (\key ->
+                        if key == "Enter" then
+                            Decode.succeed msg
+
+                        else
+                            Decode.fail "Not the enter key"
+                    )
+            )
+        )
 
 
 viewEvent : Model -> ( Int, String ) -> Element FrontendMsg
