@@ -384,8 +384,13 @@ viewEvent model ( millis, description ) =
                 |> Time.Extra.posixToParts model.zone
     in
     row [ spacing <| round <| model.relSize ScheduleLineSpacing ]
-        --TODO: führende 0 hinzufügen
-        [ el [] <| text <| (timeParts.hour |> String.fromInt) ++ ":" ++ (timeParts.minute |> String.fromInt) ++ "  " ++ description
+        [ el [] <|
+            text <|
+                (timeParts.hour |> String.fromInt)
+                    ++ ":"
+                    ++ (timeParts.minute |> String.fromInt |> String.padLeft 2 '0')
+                    ++ "  "
+                    ++ description
         , Input.button []
             { onPress = Just <| DeleteEventPressed millis
             , label = el [] <| text "x"
@@ -396,19 +401,22 @@ viewEvent model ( millis, description ) =
 viewDate : Model -> Element msg
 viewDate model =
     let
-        blur =
+        ( blur, color ) =
             if model.scheduleShown || model.dateHidden && model.mouseOver then
-                model.relSize DateBlur
+                ( model.relSize DateBlur
                     |> String.fromFloat
+                  -- , rgb255 212 212 202
+                , rgb255 167 167 159
+                )
 
             else
-                "0"
+                ( "0", colors.foreground )
     in
     el
         [ transparent <| model.dateHidden && not model.mouseOver && not model.scheduleShown
         , htmlAttribute <| Html.Attributes.style "filter" <| "blur(" ++ blur ++ "px)"
         , Font.center
-        , Font.color <| colors.foreground
+        , Font.color <| color
         , Font.size <| (model.relSize DateFont |> round)
         , moveUp <|
             if model.scheduleShown then
