@@ -1,4 +1,4 @@
-module Components.Clock exposing (new, view)
+module Components.Clock exposing (new, view, withEvents)
 
 import Color
 import Color.Convert
@@ -7,6 +7,7 @@ import SizeRelations exposing (SizeRelation(..))
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time
+import Time.Extra
 
 
 type Clock
@@ -16,6 +17,7 @@ type Clock
         , now : Time.Posix
         , handColor : Ui.Color
         , faceColor : Ui.Color
+        , events : List Time.Posix
         }
 
 
@@ -34,7 +36,29 @@ new props =
         , now = props.now
         , handColor = props.handColor
         , faceColor = props.faceColor
+        , events = []
         }
+
+
+withEvents : List Time.Posix -> Clock -> Clock
+withEvents events (Settings settings) =
+    let
+        withinNextHour : Time.Posix -> Time.Posix -> Bool
+        withinNextHour now target =
+            let
+                n =
+                    now |> Time.posixToMillis
+
+                t =
+                    target |> Time.posixToMillis
+
+                td =
+                    Time.Extra.add Time.Extra.Hour 1 settings.zone now
+                        |> Time.posixToMillis
+            in
+            n < t && t < td
+    in
+    Settings { settings | events = List.filter (withinNextHour settings.now) events }
 
 
 colorToHex : Ui.Color -> String
@@ -80,20 +104,23 @@ view (Settings settings) =
         , width sizeStr
         , height sizeStr
         ]
-        [ circle
+        ([ circle
             [ cx radiusStr
             , cy radiusStr
             , r radiusStr
             , fill <| colorToHex <| settings.faceColor
             ]
             []
-        , viewQuarterLine settings.handColor quarterLineWidth radius 0.25
-        , viewQuarterLine settings.handColor quarterLineWidth radius 0.5
-        , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
-        , viewQuarterLine settings.handColor quarterLineWidth radius 1
-        , viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
-        , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
-        ]
+         , viewQuarterLine settings.handColor quarterLineWidth radius 0.25
+         , viewQuarterLine settings.handColor quarterLineWidth radius 0.5
+         , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
+         , viewQuarterLine settings.handColor quarterLineWidth radius 1
+         ]
+            ++ List.map (viewEvent radius (relSize EventLineWidth) settings.zone) settings.events
+            ++ [ viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
+               , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
+               ]
+        )
         |> Ui.html
 
 
@@ -147,5 +174,39 @@ viewHand color width length radius radiusStr turns =
         , stroke <| colorToHex color
         , strokeWidth (String.fromFloat width)
         , strokeLinecap "round"
+        ]
+        []
+
+
+viewEvent : Float -> Float -> Time.Zone -> Time.Posix -> Svg msg
+viewEvent radius width zone eventPosix =
+    let
+        turns =
+            (Time.toMinute zone eventPosix |> toFloat) / 60
+
+        t =
+            2 * pi * (turns - 0.25)
+
+        x_1 =
+            radius + (radius / 100 * 75) * cos t |> String.fromFloat
+
+        y_1 =
+            radius + (radius / 100 * 75) * sin t |> String.fromFloat
+
+        x_2 =
+            radius + radius * cos t |> String.fromFloat
+
+        y_2 =
+            radius + radius * sin t |> String.fromFloat
+    in
+    line
+        [ x1 x_1
+        , y1 y_1
+        , x2 x_2
+        , y2 y_2
+        , stroke "#bb8800"
+        , strokeWidth (String.fromFloat width)
+
+        -- , strokeLinecap "round"
         ]
         []

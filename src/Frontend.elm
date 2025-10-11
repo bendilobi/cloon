@@ -306,6 +306,10 @@ view model =
                                 , faceColor = colors.foreground
                                 , handColor = colors.background
                                 }
+                                |> Clock.withEvents
+                                    (Dict.keys model.schedule
+                                        |> List.map Time.millisToPosix
+                                    )
                                 |> Clock.view
                             )
                     , onPress = Just ScheduleToggled
