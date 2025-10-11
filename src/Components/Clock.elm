@@ -4,6 +4,7 @@ import Color
 import Color.Convert
 import Element as Ui exposing (Element)
 import SizeRelations exposing (SizeRelation(..))
+import String.Format
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time
@@ -104,22 +105,41 @@ view (Settings settings) =
         , width sizeStr
         , height sizeStr
         ]
-        ([ circle
+        (circle
             [ cx radiusStr
             , cy radiusStr
             , r radiusStr
             , fill <| colorToHex <| settings.faceColor
             ]
             []
-         , viewQuarterLine settings.handColor quarterLineWidth radius 0.25
-         , viewQuarterLine settings.handColor quarterLineWidth radius 0.5
-         , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
-         , viewQuarterLine settings.handColor quarterLineWidth radius 1
-         ]
-            ++ List.map (viewEvent radius (relSize EventLineWidth) settings.zone) settings.events
-            ++ [ viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
-               , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
-               ]
+            :: ((case List.head settings.events of
+                    Nothing ->
+                        []
+
+                    Just posix ->
+                        if Time.Extra.diff Time.Extra.Minute settings.zone settings.now posix < 30 then
+                            [ viewEventArc radius
+                                radius
+                                radiusStr
+                                ((minute + (second / 60)) / 60)
+                                ((Time.toMinute settings.zone posix |> toFloat) / 60)
+                                --TODO: Immer Arc rendern lassen, bei diff < 30 halt voll transparent?
+                                (Time.Extra.diff Time.Extra.Minute settings.zone settings.now posix)
+                            ]
+
+                        else
+                            []
+                )
+                    ++ [ viewQuarterLine settings.handColor quarterLineWidth radius 0.25
+                       , viewQuarterLine settings.handColor quarterLineWidth radius 0.5
+                       , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
+                       , viewQuarterLine settings.handColor quarterLineWidth radius 1
+                       ]
+                    ++ List.map (viewEvent radius (relSize EventLineWidth) settings.zone) settings.events
+                    ++ [ viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
+                       , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
+                       ]
+               )
         )
         |> Ui.html
 
@@ -206,7 +226,33 @@ viewEvent radius width zone eventPosix =
         , y2 y_2
         , stroke "#bb8800"
         , strokeWidth (String.fromFloat width)
+        ]
+        []
 
-        -- , strokeLinecap "round"
+
+viewEventArc : Float -> Float -> String -> Float -> Float -> Int -> Svg msg
+viewEventArc length radius radiusStr thetaStart thetaEnd minuteDiff =
+    let
+        tStart =
+            2 * pi * (thetaStart - 0.25)
+
+        tEnd =
+            2 * pi * (thetaEnd - 0.25)
+    in
+    Svg.path
+        [ d
+            ("M {{x1}} {{y1}} L {{x2}} {{y2}} A {{radius}} {{radius}} 0 0 1 {{x3}} {{y3}} Z"
+                |> String.Format.namedValue "x1" radiusStr
+                |> String.Format.namedValue "y1" radiusStr
+                |> String.Format.namedValue "x2" (radius + length * cos tStart |> String.fromFloat)
+                |> String.Format.namedValue "y2" (radius + length * sin tStart |> String.fromFloat)
+                |> String.Format.namedValue "radius" (String.fromFloat length)
+                |> String.Format.namedValue "x3" (radius + length * cos tEnd |> String.fromFloat)
+                |> String.Format.namedValue "y3" (radius + length * sin tEnd |> String.fromFloat)
+            )
+        , stroke "#bb8800"
+        , strokeWidth "0"
+        , fill "#bb8800"
+        , fillOpacity <| String.fromFloat <| abs ((minuteDiff |> toFloat) - 30) / 30 --"0.35"
         ]
         []
