@@ -60,6 +60,7 @@ init url key =
       , currentHourInput = "00"
       , currentMinutesInput = "00"
       , currentDescInput = ""
+      , currentPoolname = ""
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -209,19 +210,36 @@ update msg model =
                                 identity
                            )
                         |> Time.posixToMillis
+
+                newSchedule =
+                    Dict.insert eventMillis model.currentDescInput model.schedule
             in
             ( { model
-                | schedule = Dict.insert eventMillis model.currentDescInput model.schedule
+                | schedule = newSchedule
                 , currentHourInput = "00"
                 , currentMinutesInput = "00"
                 , currentDescInput = ""
               }
-            , Cmd.none
+            , sendToBackend <| ScheduleChanged model.currentPoolname newSchedule model.time
             )
 
         DeleteEventPressed millis ->
-            ( { model | schedule = Dict.remove millis model.schedule }
+            let
+                newSchedule =
+                    Dict.remove millis model.schedule
+            in
+            ( { model | schedule = newSchedule }
+            , sendToBackend <| ScheduleChanged model.currentPoolname newSchedule model.time
+            )
+
+        PoolnameInputChanged text ->
+            ( { model | currentPoolname = text }
             , Cmd.none
+            )
+
+        AddToPoolRequested ->
+            ( model
+            , sendToBackend <| JoinPool model.currentPoolname model.schedule model.time
             )
 
 
@@ -326,60 +344,74 @@ view model =
                 ]
             , if model.scheduleShown then
                 column
-                    -- schedule
                     [ width fill
                     , height fill
                     , Bg.color <| rgb255 0 15 8
-                    , padding <| round <| model.relSize SchedulePadding
-                    , Font.color <| colors.foreground
-                    , Font.size <| round <| model.relSize ScheduleFontSize
-                    , spacing <| round <| model.relSize ScheduleLineSpacing
                     ]
-                    ((model.schedule
-                        |> Dict.toList
-                        |> List.map (viewEvent model)
-                     )
-                        ++ [ row
-                                [ width fill
-                                , Font.color <| rgb 0 0 0
-                                , spacing <| round <| model.relSize ScheduleLineSpacing
-                                ]
-                                [ Input.text
-                                    [ width <| px <| round <| model.relSize ScheduleFontSize * 3
-                                    , focusedOnLoad
-                                    , onEnter AddEventPressed
+                    [ column
+                        -- schedule
+                        [ width fill
+                        , padding <| round <| model.relSize SchedulePadding
+                        , Font.color <| colors.foreground
+                        , Font.size <| round <| model.relSize ScheduleFontSize
+                        , spacing <| round <| model.relSize ScheduleLineSpacing
+                        ]
+                        ((model.schedule
+                            |> Dict.toList
+                            |> List.map (viewEvent model)
+                         )
+                            ++ [ row
+                                    [ width fill
+                                    , Font.color <| rgb 0 0 0
+                                    , spacing <| round <| model.relSize ScheduleLineSpacing
                                     ]
-                                    { onChange = HourInputChanged
-                                    , text = model.currentHourInput
-                                    , placeholder = Nothing
-                                    , label = Input.labelHidden "Hours"
-                                    }
-                                , el [ Font.color colors.foreground ] <| text ":"
-                                , Input.text
-                                    [ width <| px <| round <| model.relSize ScheduleFontSize * 3
-                                    , onEnter AddEventPressed
+                                    [ Input.text
+                                        [ width <| px <| round <| model.relSize ScheduleFontSize * 3
+                                        , focusedOnLoad
+                                        , onEnter AddEventPressed
+                                        ]
+                                        { onChange = HourInputChanged
+                                        , text = model.currentHourInput
+                                        , placeholder = Nothing
+                                        , label = Input.labelHidden "Hours"
+                                        }
+                                    , el [ Font.color colors.foreground ] <| text ":"
+                                    , Input.text
+                                        [ width <| px <| round <| model.relSize ScheduleFontSize * 3
+                                        , onEnter AddEventPressed
+                                        ]
+                                        { onChange = MinutesInputChanged
+                                        , text = model.currentMinutesInput
+                                        , placeholder = Nothing
+                                        , label = Input.labelHidden "Minutes"
+                                        }
+                                    , Input.text
+                                        [ width fill --<| px <| round <| model.relSize ScheduleFontSize * 15
+                                        , onEnter AddEventPressed
+                                        ]
+                                        { onChange = DescInputChanged
+                                        , text = model.currentDescInput
+                                        , placeholder = Nothing
+                                        , label = Input.labelHidden "Description"
+                                        }
+                                    , Input.button []
+                                        { onPress = Just AddEventPressed
+                                        , label = el [ Font.color <| colors.foreground, paddingXY 10 0 ] <| text "+"
+                                        }
                                     ]
-                                    { onChange = MinutesInputChanged
-                                    , text = model.currentMinutesInput
-                                    , placeholder = Nothing
-                                    , label = Input.labelHidden "Minutes"
-                                    }
-                                , Input.text
-                                    [ width fill --<| px <| round <| model.relSize ScheduleFontSize * 15
-                                    , onEnter AddEventPressed
-                                    ]
-                                    { onChange = DescInputChanged
-                                    , text = model.currentDescInput
-                                    , placeholder = Nothing
-                                    , label = Input.labelHidden "Description"
-                                    }
-                                , Input.button []
-                                    { onPress = Just AddEventPressed
-                                    , label = el [ Font.color <| colors.foreground, paddingXY 10 0 ] <| text "+"
-                                    }
-                                ]
-                           ]
-                    )
+                               ]
+                        )
+                    , el [ height fill ] none
+                    , Input.text
+                        [ width shrink
+                        , onEnter AddToPoolRequested
+                        ]
+                        { onChange = PoolnameInputChanged
+                        , text = model.currentPoolname
+                        , placeholder = Nothing
+                        , label = Input.labelHidden "Poolname"
+                        }
+                    ]
 
               else
                 none

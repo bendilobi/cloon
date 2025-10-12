@@ -26,6 +26,7 @@ type alias FrontendModel =
     , currentHourInput : String
     , currentMinutesInput : String
     , currentDescInput : String
+    , currentPoolname : String
     }
 
 
@@ -57,11 +58,14 @@ type FrontendMsg
     | DescInputChanged String
     | AddEventPressed
     | DeleteEventPressed Int
+    | PoolnameInputChanged String
+    | AddToPoolRequested
 
 
 type ToBackend
     = NoOpToBackend
     | JoinPool String Schedule Time.Posix
+    | ScheduleChanged String Schedule Time.Posix
 
 
 type BackendMsg

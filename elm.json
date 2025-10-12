@@ -15,6 +15,7 @@
             "elm/svg": "1.0.1",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
+            "elmcraft/core-extra": "2.2.0",
             "jorgengranseth/elm-string-format": "1.0.1",
             "justinmimbs/time-extra": "1.2.0",
             "lamdera/codecs": "1.0.0",
