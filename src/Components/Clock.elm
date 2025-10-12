@@ -208,10 +208,10 @@ viewEvent radius width zone eventPosix =
             2 * pi * (turns - 0.25)
 
         x_1 =
-            radius + (radius / 100 * 75) * cos t |> String.fromFloat
+            radius + (radius / 100 * 85) * cos t |> String.fromFloat
 
         y_1 =
-            radius + (radius / 100 * 75) * sin t |> String.fromFloat
+            radius + (radius / 100 * 85) * sin t |> String.fromFloat
 
         x_2 =
             radius + radius * cos t |> String.fromFloat
@@ -226,6 +226,7 @@ viewEvent radius width zone eventPosix =
         , y2 y_2
         , stroke "#bb8800"
         , strokeWidth (String.fromFloat width)
+        , strokeLinecap "square"
         ]
         []
 
@@ -254,5 +255,7 @@ viewEventArc length radius radiusStr thetaStart thetaEnd minuteDiff =
         , strokeWidth "0"
         , fill "#bb8800"
         , fillOpacity <| String.fromFloat <| abs ((minuteDiff |> toFloat) - 30) / 30 --"0.35"
+
+        -- , strokeOpacity <| String.fromFloat <| abs ((minuteDiff |> toFloat) - 30) / 30
         ]
         []

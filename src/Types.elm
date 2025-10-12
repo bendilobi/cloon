@@ -10,6 +10,10 @@ import Time
 import Url exposing (Url)
 
 
+type alias Schedule =
+    Dict Int String
+
+
 type alias FrontendModel =
     { key : Key
     , zone : Time.Zone
@@ -17,7 +21,7 @@ type alias FrontendModel =
     , relSize : SizeRelations.SizeRelation -> Float
     , dateHidden : Bool
     , mouseOver : Bool
-    , schedule : Dict Int String
+    , schedule : Schedule
     , scheduleShown : Bool
     , currentHourInput : String
     , currentMinutesInput : String
@@ -25,8 +29,15 @@ type alias FrontendModel =
     }
 
 
+type alias Pool =
+    { sessions : List SessionId
+    , schedule : Schedule
+    , lastChange : Int
+    }
+
+
 type alias BackendModel =
-    { dateHidden : Bool
+    { pools : Dict String Pool
     }
 
 
@@ -50,7 +61,7 @@ type FrontendMsg
 
 type ToBackend
     = NoOpToBackend
-    | DateHiddenChanged Bool
+    | JoinPool String Schedule Time.Posix
 
 
 type BackendMsg
@@ -60,4 +71,4 @@ type BackendMsg
 
 type ToFrontend
     = NoOpToFrontend
-    | NewDateHidden Bool
+    | NewSchedule Schedule

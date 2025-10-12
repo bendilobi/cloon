@@ -1,6 +1,8 @@
 module Backend exposing (..)
 
+import Dict
 import Lamdera exposing (ClientId, SessionId, broadcast, onConnect, sendToFrontend)
+import Time
 import Types exposing (..)
 
 
@@ -19,7 +21,7 @@ app =
 
 init : ( Model, Cmd BackendMsg )
 init =
-    ( { dateHidden = True
+    ( { pools = Dict.empty
       }
     , Cmd.none
     )
@@ -33,9 +35,11 @@ update msg model =
 
         ClientConnected sessionId clientId ->
             ( model
-            , Cmd.batch
-                [ sendToFrontend clientId <| NewDateHidden model.dateHidden
-                ]
+            , Cmd.none
+              --TODO: Client mitteilen, dass verbunden
+              -- , Cmd.batch
+              --     [ sendToFrontend clientId <| NewDateHidden model.dateHidden
+              --     ]
             )
 
 
@@ -45,9 +49,29 @@ updateFromFrontend sessionId clientId msg model =
         NoOpToBackend ->
             ( model, Cmd.none )
 
-        DateHiddenChanged isHidden ->
-            ( { model | dateHidden = isHidden }
-            , broadcast <| NewDateHidden isHidden
+        JoinPool poolName schedule time ->
+            let
+                pool =
+                    case Dict.get poolName model.pools of
+                        Nothing ->
+                            { sessions = [ sessionId ]
+                            , schedule = schedule
+                            , lastChange = Time.posixToMillis time
+                            }
+
+                        Just pl ->
+                            { pl
+                                | sessions =
+                                    if List.member sessionId pl.sessions then
+                                        pl.sessions
+
+                                    else
+                                        sessionId :: pl.sessions
+                                , lastChange = Time.posixToMillis time
+                            }
+            in
+            ( { model | pools = Dict.insert poolName pool model.pools }
+            , sendToFrontend clientId <| NewSchedule pool.schedule
             )
 
 

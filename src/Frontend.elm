@@ -116,7 +116,7 @@ update msg model =
                     not model.dateHidden
             in
             ( { model | dateHidden = newHidden }
-            , sendToBackend <| DateHiddenChanged newHidden
+            , Cmd.none
             )
 
         MouseOver over ->
@@ -231,8 +231,8 @@ updateFromBackend msg model =
         NoOpToFrontend ->
             ( model, Cmd.none )
 
-        NewDateHidden isHidden ->
-            ( { model | dateHidden = isHidden }
+        NewSchedule schedule ->
+            ( { model | schedule = schedule }
             , Cmd.none
             )
 
