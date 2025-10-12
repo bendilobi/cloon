@@ -18,7 +18,9 @@ type alias FrontendModel =
     { key : Key
     , zone : Time.Zone
     , time : Time.Posix
-    , relSize : SizeRelations.SizeRelation -> Float
+    , size : Float
+
+    -- , relSize : SizeRelations.SizeRelation -> Float
     , dateHidden : Bool
     , mouseOver : Bool
     , schedule : Schedule

@@ -52,7 +52,9 @@ init url key =
     ( { key = key
       , zone = Time.utc
       , time = Time.millisToPosix 0
-      , relSize = Rel.size 200
+      , size = 200
+
+      --   , relSize = Rel.size 200
       , dateHidden = True
       , mouseOver = False
       , schedule = Dict.empty
@@ -102,12 +104,14 @@ update msg model =
             )
 
         ViewportReceived { viewport } ->
-            ( { model | relSize = Rel.size <| Basics.min viewport.width viewport.height }
+            -- ( { model | relSize = Rel.size <| Basics.min viewport.width viewport.height }
+            ( { model | size = Basics.min viewport.width viewport.height }
             , Cmd.none
             )
 
         Resized width height ->
-            ( { model | relSize = Rel.size <| toFloat <| Basics.min width height }
+            -- ( { model | relSize = Rel.size <| toFloat <| Basics.min width height }
+            ( { model | size = toFloat <| Basics.min width height }
             , Cmd.none
             )
 
@@ -294,17 +298,17 @@ view model =
             [ column
                 -- clock and date
                 (if model.scheduleShown then
-                    [ padding <| round <| model.relSize MoonClockPadding ]
+                    [ padding <| round <| Rel.size model.size MoonClockPadding ]
 
                  else
                     [ width fill
-                    , spacing (model.relSize MainSpacing |> round)
+                    , spacing (Rel.size model.size MainSpacing |> round)
                     , centerY
                     ]
                 )
                 [ Input.button
                     [ if model.scheduleShown then
-                        paddingXY (round <| model.relSize MoonClockPadding) 0
+                        paddingXY (round <| Rel.size model.size MoonClockPadding) 0
 
                       else
                         centerX
@@ -313,7 +317,7 @@ view model =
                         el []
                             (Clock.new
                                 { size =
-                                    model.relSize <|
+                                    Rel.size model.size <|
                                         if model.scheduleShown then
                                             MoonClock
 
@@ -351,10 +355,10 @@ view model =
                     [ column
                         -- schedule
                         [ width fill
-                        , padding <| round <| model.relSize SchedulePadding
+                        , padding <| round <| Rel.size model.size SchedulePadding
                         , Font.color <| colors.foreground
-                        , Font.size <| round <| model.relSize ScheduleFontSize
-                        , spacing <| round <| model.relSize ScheduleLineSpacing
+                        , Font.size <| round <| Rel.size model.size ScheduleFontSize
+                        , spacing <| round <| Rel.size model.size ScheduleLineSpacing
                         ]
                         ((model.schedule
                             |> Dict.toList
@@ -363,10 +367,10 @@ view model =
                             ++ [ row
                                     [ width fill
                                     , Font.color <| rgb 0 0 0
-                                    , spacing <| round <| model.relSize ScheduleLineSpacing
+                                    , spacing <| round <| Rel.size model.size ScheduleLineSpacing
                                     ]
                                     [ Input.text
-                                        [ width <| px <| round <| model.relSize ScheduleFontSize * 3
+                                        [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 3
                                         , focusedOnLoad
                                         , onEnter AddEventPressed
                                         ]
@@ -377,7 +381,7 @@ view model =
                                         }
                                     , el [ Font.color colors.foreground ] <| text ":"
                                     , Input.text
-                                        [ width <| px <| round <| model.relSize ScheduleFontSize * 3
+                                        [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 3
                                         , onEnter AddEventPressed
                                         ]
                                         { onChange = MinutesInputChanged
@@ -386,7 +390,7 @@ view model =
                                         , label = Input.labelHidden "Minutes"
                                         }
                                     , Input.text
-                                        [ width fill --<| px <| round <| model.relSize ScheduleFontSize * 15
+                                        [ width fill --<| px <| round <| Rel.size model.size ScheduleFontSize * 15
                                         , onEnter AddEventPressed
                                         ]
                                         { onChange = DescInputChanged
@@ -442,7 +446,7 @@ viewEvent model ( millis, description ) =
             Time.millisToPosix millis
                 |> Time.Extra.posixToParts model.zone
     in
-    row [ spacing <| round <| model.relSize ScheduleLineSpacing ]
+    row [ spacing <| round <| Rel.size model.size ScheduleLineSpacing ]
         [ el [] <|
             text <|
                 (timeParts.hour |> String.fromInt)
@@ -462,7 +466,7 @@ viewDate model =
     let
         ( blur, color ) =
             if model.scheduleShown || model.dateHidden && model.mouseOver then
-                ( model.relSize DateBlur
+                ( Rel.size model.size DateBlur
                     |> String.fromFloat
                   -- , rgb255 212 212 202
                 , rgb255 167 167 159
@@ -476,10 +480,10 @@ viewDate model =
         , htmlAttribute <| Html.Attributes.style "filter" <| "blur(" ++ blur ++ "px)"
         , Font.center
         , Font.color <| color
-        , Font.size <| (model.relSize DateFont |> round)
+        , Font.size <| (Rel.size model.size DateFont |> round)
         , moveUp <|
             if model.scheduleShown then
-                model.relSize DateCloudShift
+                Rel.size model.size DateCloudShift
 
             else
                 0
