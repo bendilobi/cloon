@@ -16,6 +16,7 @@ type alias Schedule =
 
 type alias FrontendModel =
     { key : Key
+    , version : String
     , zone : Time.Zone
     , time : Time.Posix
     , size : Float
@@ -48,6 +49,7 @@ type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | NoOpFrontendMsg
+    | GotPortMessage String
     | Tick Time.Posix
     | AdjustTimeZone Time.Zone
     | ViewportReceived Browser.Dom.Viewport

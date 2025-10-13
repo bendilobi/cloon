@@ -15,8 +15,10 @@ import Html exposing (Html)
 import Html.Attributes
 import Html.Events
 import Json.Decode as Decode
+import Json.Encode
 import Lamdera exposing (sendToBackend)
 import Platform.Cmd as Cmd
+import Ports
 import SizeRelations as Rel exposing (SizeRelation(..))
 import String exposing (toInt)
 import String.Extra
@@ -51,6 +53,7 @@ app =
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
     ( { key = key
+      , version = "-"
       , zone = Time.utc
       , time = Time.millisToPosix 0
       , size = 200
@@ -93,6 +96,23 @@ update msg model =
 
         NoOpFrontendMsg ->
             ( model, Cmd.none )
+
+        GotPortMessage rawMessage ->
+            case Ports.decodeMsg rawMessage of
+                Ports.GotInitData data ->
+                    ( { model
+                        | currentPoolname = data.poolName
+                        , version = data.version
+                      }
+                    , sendToBackend <| JoinPool data.poolName model.schedule model.time
+                    )
+
+                Ports.NoOp ->
+                    ( model, Cmd.none )
+
+                Ports.UnknownMessage message ->
+                    --TODO: Log error message?
+                    ( model, Cmd.none )
 
         Tick newTime ->
             ( { model | time = newTime }
@@ -267,7 +287,10 @@ update msg model =
                     model.currentPoolname |> String.Extra.clean
             in
             ( { model | currentPoolname = poolName }
-            , sendToBackend <| JoinPool poolName model.schedule model.time
+            , Cmd.batch
+                [ sendToBackend <| JoinPool poolName model.schedule model.time
+                , Ports.toJs { tag = "StoreSessionPoolName", data = Json.Encode.string model.currentPoolname }
+                ]
             )
 
 
@@ -288,6 +311,7 @@ subscriptions model =
     Sub.batch
         [ Time.every 1000 Tick
         , Browser.Events.onResize Resized
+        , Ports.toElm GotPortMessage
         ]
 
 
