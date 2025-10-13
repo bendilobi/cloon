@@ -67,6 +67,7 @@ init url key =
       , currentMinutesInput = "00"
       , currentDescInput = ""
       , currentPoolname = ""
+      , poolNameShown = False
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -282,15 +283,24 @@ update msg model =
             )
 
         AddToPoolRequested ->
+            --TODO: If there was a previous poolName, send it + remove sessionId from that pool in backend
             let
                 poolName =
                     model.currentPoolname |> String.Extra.clean
             in
-            ( { model | currentPoolname = poolName }
+            ( { model
+                | currentPoolname = poolName
+                , poolNameShown = False
+              }
             , Cmd.batch
                 [ sendToBackend <| JoinPool poolName model.schedule model.time
                 , Ports.toJs { tag = "StoreSessionPoolName", data = Json.Encode.string model.currentPoolname }
                 ]
+            )
+
+        PoolNameInputToggled ->
+            ( { model | poolNameShown = not model.poolNameShown }
+            , Cmd.none
             )
 
 
@@ -454,15 +464,24 @@ view model =
                                ]
                         )
                     , el [ height fill ] none
-                    , Input.text
-                        [ width shrink
-                        , onEnter AddToPoolRequested
+                    , row [ width fill ]
+                        [ Input.button [ Font.color colors.foreground ]
+                            { onPress = Just PoolNameInputToggled
+                            , label = el [ padding 10 ] <| text "::"
+                            }
+                        , if model.poolNameShown then
+                            Input.text
+                                [ onEnter AddToPoolRequested
+                                ]
+                                { onChange = PoolnameInputChanged
+                                , text = model.currentPoolname
+                                , placeholder = Nothing
+                                , label = Input.labelHidden "Poolname"
+                                }
+
+                          else
+                            none
                         ]
-                        { onChange = PoolnameInputChanged
-                        , text = model.currentPoolname
-                        , placeholder = Nothing
-                        , label = Input.labelHidden "Poolname"
-                        }
                     ]
 
               else

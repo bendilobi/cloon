@@ -30,6 +30,7 @@ type alias FrontendModel =
     , currentMinutesInput : String
     , currentDescInput : String
     , currentPoolname : String
+    , poolNameShown : Bool
     }
 
 
@@ -64,6 +65,7 @@ type FrontendMsg
     | DeleteEventPressed Int
     | PoolnameInputChanged String
     | AddToPoolRequested
+    | PoolNameInputToggled
 
 
 type ToBackend
