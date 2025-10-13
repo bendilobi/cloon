@@ -131,9 +131,28 @@ update msg model =
             )
 
         ScheduleToggled ->
-            ( { model | scheduleShown = not model.scheduleShown }
-            , Cmd.none
-            )
+            if model.scheduleShown then
+                ( { model | scheduleShown = not model.scheduleShown }
+                , Cmd.none
+                )
+
+            else
+                --About to show the schedule
+                let
+                    ( cleanedSchedule, pastEvents ) =
+                        model.schedule
+                            |> Dict.partition (\millis _ -> millis >= Time.posixToMillis model.time)
+                in
+                ( { model
+                    | scheduleShown = not model.scheduleShown
+                    , schedule = cleanedSchedule
+                  }
+                , if Dict.size pastEvents > 0 then
+                    sendToBackend <| ScheduleChanged model.currentPoolname cleanedSchedule model.time
+
+                  else
+                    Cmd.none
+                )
 
         HourInputChanged newHour ->
             ( { model
