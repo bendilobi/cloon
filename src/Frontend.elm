@@ -19,6 +19,7 @@ import Lamdera exposing (sendToBackend)
 import Platform.Cmd as Cmd
 import SizeRelations as Rel exposing (SizeRelation(..))
 import String exposing (toInt)
+import String.Extra
 import String.Format
 import Task
 import Time
@@ -216,7 +217,7 @@ update msg model =
                         |> Time.posixToMillis
 
                 newSchedule =
-                    Dict.insert eventMillis model.currentDescInput model.schedule
+                    Dict.insert eventMillis (model.currentDescInput |> String.Extra.clean) model.schedule
             in
             ( { model
                 | schedule = newSchedule
@@ -242,8 +243,12 @@ update msg model =
             )
 
         AddToPoolRequested ->
-            ( model
-            , sendToBackend <| JoinPool model.currentPoolname model.schedule model.time
+            let
+                poolName =
+                    model.currentPoolname |> String.Extra.clean
+            in
+            ( { model | currentPoolname = poolName }
+            , sendToBackend <| JoinPool poolName model.schedule model.time
             )
 
 
