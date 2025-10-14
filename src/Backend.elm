@@ -4,6 +4,7 @@ import Dict
 import Env
 import Lamdera exposing (ClientId, SessionId, broadcast, onConnect, sendToFrontend)
 import List.Extra
+import Platform.Cmd as Cmd
 import Time
 import Types exposing (..)
 
@@ -51,7 +52,7 @@ updateFromFrontend sessionId clientId msg model =
         NoOpToBackend ->
             ( model, Cmd.none )
 
-        JoinPool poolName schedule time ->
+        JoinPool previousPoolName poolName schedule time ->
             if poolName == Env.hardcodedPoolname then
                 let
                     pool =
@@ -73,6 +74,25 @@ updateFromFrontend sessionId clientId msg model =
                 ( { model | pools = Dict.insert poolName pool model.pools }
                 , sendToFrontend clientId <| NewSchedule pool.schedule
                 )
+
+            else if previousPoolName == Just Env.hardcodedPoolname then
+                let
+                    prevPN =
+                        Env.hardcodedPoolname
+
+                    prevPool =
+                        Dict.get prevPN model.pools
+                            |> Maybe.andThen
+                                (\prevP -> Just { prevP | sessions = List.filter (\s -> s /= sessionId) prevP.sessions })
+                in
+                case prevPool of
+                    Nothing ->
+                        ( model, Cmd.none )
+
+                    Just prevP ->
+                        ( { model | pools = Dict.insert prevPN prevP model.pools }
+                        , Cmd.none
+                        )
 
             else
                 --TODO: Maybe give back some error?

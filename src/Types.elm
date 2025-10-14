@@ -5,7 +5,6 @@ import Browser.Dom
 import Browser.Navigation exposing (Key)
 import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
-import SizeRelations
 import Time
 import Url exposing (Url)
 
@@ -20,8 +19,6 @@ type alias FrontendModel =
     , zone : Time.Zone
     , time : Time.Posix
     , size : Float
-
-    -- , relSize : SizeRelations.SizeRelation -> Float
     , dateHidden : Bool
     , mouseOver : Bool
     , schedule : Schedule
@@ -29,7 +26,8 @@ type alias FrontendModel =
     , currentHourInput : String
     , currentMinutesInput : String
     , currentDescInput : String
-    , currentPoolname : String
+    , currentPoolnameInput : String
+    , poolName : String
     , poolNameShown : Bool
     }
 
@@ -70,7 +68,7 @@ type FrontendMsg
 
 type ToBackend
     = NoOpToBackend
-    | JoinPool String Schedule Time.Posix
+    | JoinPool (Maybe String) String Schedule Time.Posix
     | ScheduleChanged String Schedule Time.Posix
 
 

@@ -57,8 +57,6 @@ init url key =
       , zone = Time.utc
       , time = Time.millisToPosix 0
       , size = 200
-
-      --   , relSize = Rel.size 200
       , dateHidden = True
       , mouseOver = False
       , schedule = Dict.empty
@@ -66,7 +64,8 @@ init url key =
       , currentHourInput = "00"
       , currentMinutesInput = "00"
       , currentDescInput = ""
-      , currentPoolname = ""
+      , currentPoolnameInput = ""
+      , poolName = ""
       , poolNameShown = False
       }
     , Cmd.batch
@@ -102,10 +101,11 @@ update msg model =
             case Ports.decodeMsg rawMessage of
                 Ports.GotInitData data ->
                     ( { model
-                        | currentPoolname = data.poolName
+                        | poolName = data.poolName
+                        , currentPoolnameInput = data.poolName
                         , version = data.version
                       }
-                    , sendToBackend <| JoinPool data.poolName model.schedule model.time
+                    , sendToBackend <| JoinPool Nothing data.poolName model.schedule model.time
                     )
 
                 Ports.NoOp ->
@@ -169,7 +169,7 @@ update msg model =
                     , schedule = cleanedSchedule
                   }
                 , if Dict.size pastEvents > 0 then
-                    sendToBackend <| ScheduleChanged model.currentPoolname cleanedSchedule model.time
+                    sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
 
                   else
                     Cmd.none
@@ -265,7 +265,7 @@ update msg model =
                 , currentMinutesInput = "00"
                 , currentDescInput = ""
               }
-            , sendToBackend <| ScheduleChanged model.currentPoolname newSchedule model.time
+            , sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
             )
 
         DeleteEventPressed millis ->
@@ -274,11 +274,11 @@ update msg model =
                     Dict.remove millis model.schedule
             in
             ( { model | schedule = newSchedule }
-            , sendToBackend <| ScheduleChanged model.currentPoolname newSchedule model.time
+            , sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
             )
 
         PoolnameInputChanged text ->
-            ( { model | currentPoolname = text }
+            ( { model | currentPoolnameInput = text }
             , Cmd.none
             )
 
@@ -286,15 +286,16 @@ update msg model =
             --TODO: If there was a previous poolName, send it + remove sessionId from that pool in backend
             let
                 poolName =
-                    model.currentPoolname |> String.Extra.clean
+                    model.currentPoolnameInput |> String.Extra.clean
             in
             ( { model
-                | currentPoolname = poolName
+                | currentPoolnameInput = poolName
+                , poolName = poolName
                 , poolNameShown = False
               }
             , Cmd.batch
-                [ sendToBackend <| JoinPool poolName model.schedule model.time
-                , Ports.toJs { tag = "StoreSessionPoolName", data = Json.Encode.string model.currentPoolname }
+                [ sendToBackend <| JoinPool (Just model.poolName) poolName model.schedule model.time
+                , Ports.toJs { tag = "StoreSessionPoolName", data = Json.Encode.string model.currentPoolnameInput }
                 ]
             )
 
@@ -474,7 +475,7 @@ view model =
                                 [ onEnter AddToPoolRequested
                                 ]
                                 { onChange = PoolnameInputChanged
-                                , text = model.currentPoolname
+                                , text = model.currentPoolnameInput
                                 , placeholder = Nothing
                                 , label = Input.labelHidden "Poolname"
                                 }
