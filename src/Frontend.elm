@@ -169,11 +169,14 @@ update msg model =
                     | scheduleShown = not model.scheduleShown
                     , schedule = cleanedSchedule
                   }
-                , if Dict.size pastEvents > 0 then
-                    sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
+                , Cmd.batch
+                    [ if Dict.size pastEvents > 0 then
+                        sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
 
-                  else
-                    Cmd.none
+                      else
+                        Cmd.none
+                    , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+                    ]
                 )
 
         HourInputChanged newHour ->
@@ -266,7 +269,10 @@ update msg model =
                 , currentMinutesInput = ""
                 , currentDescInput = ""
               }
-            , sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
+            , Cmd.batch
+                [ sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
+                , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+                ]
             )
 
         DeleteEventPressed millis ->
@@ -301,7 +307,7 @@ update msg model =
 
         PoolNameInputToggled ->
             ( { model | poolNameShown = not model.poolNameShown }
-            , Cmd.none
+            , Browser.Dom.focus ids.poolInput |> Task.attempt (\_ -> NoOpFrontendMsg)
             )
 
 
@@ -337,6 +343,14 @@ colors =
 
 maxDescriptionCharacters =
     40
+
+
+ids =
+    { hoursInput = "hours"
+    , minutesInput = "minutes"
+    , descInput = "desc"
+    , poolInput = "pool"
+    }
 
 
 view : Model -> Html FrontendMsg
@@ -454,6 +468,7 @@ view model =
                                         (inputAttributes
                                             ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
                                                , Font.alignRight
+                                               , htmlAttribute <| Html.Attributes.id ids.hoursInput
                                                ]
                                         )
                                         { onChange = HourInputChanged
@@ -507,7 +522,11 @@ view model =
                             }
                         , if model.poolNameShown then
                             Input.text
-                                (onEnter AddToPoolRequested :: inputStyling)
+                                (inputStyling
+                                    ++ [ onEnter AddToPoolRequested
+                                       , htmlAttribute <| Html.Attributes.id ids.poolInput
+                                       ]
+                                )
                                 { onChange = PoolnameInputChanged
                                 , text = model.currentPoolnameInput
                                 , placeholder = Nothing
