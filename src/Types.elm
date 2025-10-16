@@ -29,6 +29,7 @@ type alias FrontendModel =
     , currentPoolnameInput : String
     , poolName : String
     , poolNameShown : Bool
+    , mouseHoveringOver : Maybe Int
     }
 
 
@@ -64,6 +65,7 @@ type FrontendMsg
     | PoolnameInputChanged String
     | AddToPoolRequested
     | PoolNameInputToggled
+    | MouseEntered (Maybe Int)
 
 
 type ToBackend

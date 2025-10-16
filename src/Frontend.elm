@@ -68,6 +68,7 @@ init url key =
       , currentPoolnameInput = ""
       , poolName = ""
       , poolNameShown = False
+      , mouseHoveringOver = Nothing
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -308,6 +309,11 @@ update msg model =
         PoolNameInputToggled ->
             ( { model | poolNameShown = not model.poolNameShown }
             , Browser.Dom.focus ids.poolInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+            )
+
+        MouseEntered id ->
+            ( { model | mouseHoveringOver = id }
+            , Cmd.none
             )
 
 
@@ -567,17 +573,35 @@ viewEvent model ( millis, description ) =
             Time.millisToPosix millis
                 |> Time.Extra.posixToParts model.zone
     in
-    row [ spacing <| round <| Rel.size model.size ScheduleLineSpacing ]
-        [ el [] <|
-            text <|
-                (timeParts.hour |> String.fromInt)
-                    ++ ":"
-                    ++ (timeParts.minute |> String.fromInt |> String.padLeft 2 '0')
-                    ++ "  "
-                    ++ description
+    row
+        [ spacing <| round <| Rel.size model.size ScheduleLineSpacing
+        , Events.onMouseEnter <| MouseEntered <| Just millis
+        , Events.onMouseLeave <| MouseEntered Nothing
+        ]
+        [ row []
+            [ el [ Font.color colors.schedule ] <|
+                if timeParts.hour < 10 then
+                    text "0"
+
+                else
+                    none
+            , el [] <|
+                text <|
+                    (timeParts.hour |> String.fromInt)
+                        ++ ":"
+                        ++ (timeParts.minute |> String.fromInt |> String.padLeft 2 '0')
+                        ++ "  "
+                        ++ description
+            ]
         , Input.button []
             { onPress = Just <| DeleteEventPressed millis
-            , label = el [] <| text "x"
+            , label =
+                el
+                    [ transparent <| not (model.mouseHoveringOver == Just millis)
+                    , paddingEach { right = 15, left = 0, top = 0, bottom = 0 }
+                    ]
+                <|
+                    text "x"
             }
         ]
 
