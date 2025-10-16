@@ -198,7 +198,16 @@ update msg model =
                             else
                                 model.currentHourInput
               }
-            , Cmd.none
+            , case toInt newHour of
+                Nothing ->
+                    Cmd.none
+
+                Just hours ->
+                    if hours > 2 then
+                        Browser.Dom.focus ids.minutesInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+
+                    else
+                        Cmd.none
             )
 
         MinutesInputChanged newMinutes ->
@@ -219,7 +228,11 @@ update msg model =
                             else
                                 model.currentMinutesInput
               }
-            , Cmd.none
+            , if String.length newMinutes > 1 then
+                Browser.Dom.focus ids.descInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+
+              else
+                Cmd.none
             )
 
         DescInputChanged newDesc ->
@@ -494,6 +507,7 @@ view model =
                                         (inputAttributes
                                             ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
                                                , Font.alignLeft
+                                               , htmlAttribute <| Html.Attributes.id ids.minutesInput
                                                ]
                                         )
                                         { onChange = MinutesInputChanged
@@ -503,8 +517,10 @@ view model =
                                         }
                                     , el [ width <| px <| round <| Rel.size model.size ScheduleLineSpacing ] none
                                     , Input.text
-                                        (width (fill |> maximum (Rel.size model.size ScheduleFontSize * (maxDescriptionCharacters * 0.5) |> round))
-                                            :: inputAttributes
+                                        (inputAttributes
+                                            ++ [ width (fill |> maximum (Rel.size model.size ScheduleFontSize * (maxDescriptionCharacters * 0.5) |> round))
+                                               , htmlAttribute <| Html.Attributes.id ids.descInput
+                                               ]
                                         )
                                         { onChange = DescInputChanged
                                         , text = model.currentDescInput
@@ -515,8 +531,6 @@ view model =
                                         { onPress = Just AddEventPressed
                                         , label = el [ paddingXY 10 0 ] <| text "+"
                                         }
-
-                                    -- , el [ width <| px <| round <| model.size * 0.1 ] none
                                     ]
                                ]
                         )
