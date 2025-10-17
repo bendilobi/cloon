@@ -307,6 +307,7 @@ update msg model =
                 , currentHourInput = ""
                 , currentMinutesInput = ""
                 , currentDescInput = ""
+                , eventReadyForAdding = False
               }
             , Cmd.batch
                 [ sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
