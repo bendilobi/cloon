@@ -20,6 +20,7 @@ import Json.Encode
 import Lamdera exposing (sendToBackend)
 import Platform.Cmd as Cmd
 import Ports
+import Set
 import SizeRelations as Rel exposing (SizeRelation(..))
 import String exposing (toInt)
 import String.Extra
@@ -71,6 +72,7 @@ init url key =
       , mouseHoveringOver = Nothing
       , eventInputFocused = False
       , eventReadyForAdding = False
+      , deletedEvents = Set.empty
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -157,7 +159,11 @@ update msg model =
 
         ScheduleToggled ->
             if model.scheduleShown then
-                ( { model | scheduleShown = not model.scheduleShown }
+                ( { model
+                    | scheduleShown = not model.scheduleShown
+                    , schedule = Dict.filter (\key _ -> not (Set.member key model.deletedEvents)) model.schedule
+                    , deletedEvents = Set.empty
+                  }
                 , Cmd.none
                 )
 
@@ -297,12 +303,22 @@ update msg model =
             )
 
         DeleteEventPressed millis ->
-            let
-                newSchedule =
-                    Dict.remove millis model.schedule
-            in
-            ( { model | schedule = newSchedule }
-            , sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
+            -- let
+            --     newSchedule =
+            --         Dict.remove millis model.schedule
+            -- in
+            -- ( { model | schedule = newSchedule }
+            -- , sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
+            -- )
+            ( { model
+                | deletedEvents =
+                    if Set.member millis model.deletedEvents then
+                        Set.remove millis model.deletedEvents
+
+                    else
+                        Set.insert millis model.deletedEvents
+              }
+            , Cmd.none
             )
 
         PoolnameInputChanged text ->
@@ -663,13 +679,27 @@ viewEvent model ( millis, description ) =
         timeParts =
             Time.millisToPosix millis
                 |> Time.Extra.posixToParts model.zone
+
+        deleteButtonLabel =
+            el
+                [ paddingEach { right = Rel.size model.size ScheduleFontSize |> round, left = 0, top = 0, bottom = 0 }
+                , transparent <| model.mouseHoveringOver /= Just millis
+                ]
+            <|
+                text "x"
     in
     row
         [ spacing <| round <| Rel.size model.size ScheduleLineSpacing
         , Events.onMouseEnter <| MouseEntered <| Just millis
         , Events.onMouseLeave <| MouseEntered Nothing
         ]
-        [ row []
+        [ paragraph
+            (if Set.member millis model.deletedEvents then
+                [ Font.strike ]
+
+             else
+                []
+            )
             [ el [ Font.color colors.schedule ] <|
                 if timeParts.hour < 10 then
                     text "0"
@@ -684,16 +714,14 @@ viewEvent model ( millis, description ) =
                         ++ "  "
                         ++ description
             ]
-        , Input.button []
-            { onPress = Just <| DeleteEventPressed millis
-            , label =
-                el
-                    [ transparent <| not (model.mouseHoveringOver == Just millis)
-                    , paddingEach { right = 15, left = 0, top = 0, bottom = 0 }
-                    ]
-                <|
-                    text "x"
-            }
+        , if model.mouseHoveringOver == Just millis then
+            Input.button []
+                { onPress = Just <| DeleteEventPressed millis
+                , label = deleteButtonLabel
+                }
+
+          else
+            deleteButtonLabel
         ]
 
 

@@ -5,6 +5,7 @@ import Browser.Dom
 import Browser.Navigation exposing (Key)
 import Dict exposing (Dict)
 import Lamdera exposing (ClientId, SessionId)
+import Set exposing (Set)
 import Time
 import Url exposing (Url)
 
@@ -32,6 +33,7 @@ type alias FrontendModel =
     , mouseHoveringOver : Maybe Int
     , eventInputFocused : Bool
     , eventReadyForAdding : Bool
+    , deletedEvents : Set Int
     }
 
 
