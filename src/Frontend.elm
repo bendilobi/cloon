@@ -69,6 +69,8 @@ init url key =
       , poolName = ""
       , poolNameShown = False
       , mouseHoveringOver = Nothing
+      , eventInputFocused = False
+      , eventReadyForAdding = False
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -181,6 +183,15 @@ update msg model =
                 )
 
         HourInputChanged newHour ->
+            let
+                ready =
+                    case toInt newHour of
+                        Nothing ->
+                            False
+
+                        Just hours ->
+                            hours > 2
+            in
             ( { model
                 | currentHourInput =
                     case toInt newHour of
@@ -197,17 +208,13 @@ update msg model =
 
                             else
                                 model.currentHourInput
+                , eventReadyForAdding = ready
               }
-            , case toInt newHour of
-                Nothing ->
-                    Cmd.none
+            , if ready then
+                Browser.Dom.focus ids.minutesInput |> Task.attempt (\_ -> NoOpFrontendMsg)
 
-                Just hours ->
-                    if hours > 2 then
-                        Browser.Dom.focus ids.minutesInput |> Task.attempt (\_ -> NoOpFrontendMsg)
-
-                    else
-                        Cmd.none
+              else
+                Cmd.none
             )
 
         MinutesInputChanged newMinutes ->
@@ -329,6 +336,11 @@ update msg model =
             , Cmd.none
             )
 
+        EventInputFocused focused ->
+            ( { model | eventInputFocused = focused }
+            , Cmd.none
+            )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -351,12 +363,13 @@ subscriptions model =
         ]
 
 
-colors : { foreground : Color, background : Color, schedule : Color, accent : Color }
+colors : { foreground : Color, background : Color, schedule : Color, accent : Color, disabled : Color }
 colors =
     { foreground = rgb255 241 241 230
     , background = rgb255 21 35 65
     , schedule = rgb255 0 15 8
     , accent = rgb255 187 136 0
+    , disabled = rgb 0.15 0.15 0.15
     }
 
 
@@ -380,12 +393,10 @@ view model =
               --   Bg.color colors.schedule
               Bg.color <| rgba 0 0 0 0
             , Font.color colors.foreground
-            , Border.color <| rgb 0.1 0.1 0.1
-            , Border.widthEach { bottom = 4, top = 0, left = 0, right = 0 }
+            , Border.color colors.disabled
+            , Border.widthEach { bottom = round <| Rel.size model.size InputFieldUnderline, top = 0, left = 0, right = 0 }
             , focused [ Border.color colors.accent ]
-            , paddingXY 0 5
-
-            -- , Font.center
+            , paddingXY 0 (round <| Rel.size model.size InputFieldPaddingY)
             ]
 
         inputAttributes =
@@ -418,8 +429,6 @@ view model =
 
                  else
                     [ width fill
-
-                    -- , spacing (Rel.size model.size MainSpacing |> round)
                     , centerY
                     ]
                 )
@@ -536,6 +545,12 @@ view model =
                     , el
                         [ width fill
                         , above <|
+                            let
+                                focusHandlingAttrs =
+                                    [ Events.onFocus <| EventInputFocused True
+                                    , Events.onLoseFocus <| EventInputFocused False
+                                    ]
+                            in
                             row
                                 {- Event entry fields -}
                                 [ width fill
@@ -548,6 +563,7 @@ view model =
                                 ]
                                 [ Input.text
                                     (inputAttributes
+                                        ++ focusHandlingAttrs
                                         ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
                                            , Font.alignRight
                                            , htmlAttribute <| Html.Attributes.id ids.hoursInput
@@ -560,14 +576,20 @@ view model =
                                     }
                                 , el
                                     (inputAttributes
-                                        ++ [ Font.color <| rgb 0.3 0.3 0.3
-                                           , Border.width 0
+                                        ++ [ Font.color <|
+                                                if model.eventInputFocused then
+                                                    colors.foreground
+
+                                                else
+                                                    colors.disabled
+                                           , Border.color <| rgba 0 0 0 0
                                            ]
                                     )
                                   <|
                                     text ":"
                                 , Input.text
                                     (inputAttributes
+                                        ++ focusHandlingAttrs
                                         ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
                                            , Font.alignLeft
                                            , htmlAttribute <| Html.Attributes.id ids.minutesInput
@@ -581,6 +603,7 @@ view model =
                                 , el [ width <| px <| round <| Rel.size model.size ScheduleLineSpacing ] none
                                 , Input.text
                                     (inputAttributes
+                                        ++ focusHandlingAttrs
                                         ++ [ width fill
                                            , htmlAttribute <| Html.Attributes.id ids.descInput
                                            ]
@@ -590,8 +613,20 @@ view model =
                                     , placeholder = Nothing
                                     , label = Input.labelHidden "Description"
                                     }
-                                , Input.button [ Font.color <| rgb 0.3 0.3 0.3 ]
-                                    { onPress = Just AddEventPressed
+                                , Input.button
+                                    [ Font.color <|
+                                        if model.eventReadyForAdding then
+                                            colors.foreground
+
+                                        else
+                                            colors.disabled
+                                    ]
+                                    { onPress =
+                                        if model.eventReadyForAdding then
+                                            Just AddEventPressed
+
+                                        else
+                                            Nothing
                                     , label = el [ paddingXY (round <| Rel.size model.size ButtonPadding) 0 ] <| text "+"
                                     }
                                 ]

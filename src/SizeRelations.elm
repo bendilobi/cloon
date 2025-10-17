@@ -17,6 +17,8 @@ type SizeRelation
     | ScheduleLineSpacing
     | EventInputPaddingY
     | ButtonPadding
+    | InputFieldPaddingY
+    | InputFieldUnderline
 
 
 size : Float -> SizeRelation -> Float
@@ -67,4 +69,10 @@ size baseSize sizeRelation =
 
             ButtonPadding ->
                 0.03
+
+            InputFieldPaddingY ->
+                0.005
+
+            InputFieldUnderline ->
+                0.01
           )
