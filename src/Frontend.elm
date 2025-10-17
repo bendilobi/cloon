@@ -374,6 +374,22 @@ ids =
 
 view : Model -> Html FrontendMsg
 view model =
+    let
+        inputStyling =
+            [ -- , width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.5
+              Bg.color colors.schedule
+            , Font.color colors.foreground
+            , Border.color <| rgb 0.1 0.1 0.1
+            , Border.widthEach { bottom = 4, top = 0, left = 0, right = 0 }
+            , focused [ Border.color colors.accent ]
+            , paddingXY 0 5
+
+            -- , Font.center
+            ]
+
+        inputAttributes =
+            onEnter AddEventPressed :: inputStyling
+    in
     layoutWith
         { options =
             [ focusStyle
@@ -393,74 +409,103 @@ view model =
             [ width fill
             , height fill
             ]
-            [ column
-                -- clock and date
+            [ row
                 (if model.scheduleShown then
-                    [ padding <| round <| Rel.size model.size MoonClockPadding ]
+                    [ width fill
+                    , padding <| round <| Rel.size model.size MoonClockPadding
+                    ]
 
                  else
                     [ width fill
-                    , spacing (Rel.size model.size MainSpacing |> round)
+
+                    -- , spacing (Rel.size model.size MainSpacing |> round)
                     , centerY
                     ]
                 )
-                [ Input.button
-                    [ if model.scheduleShown then
-                        paddingXY (round <| Rel.size model.size MoonClockPadding) 0
+                [ column
+                    -- clock and date
+                    (if model.scheduleShown then
+                        []
 
-                      else
-                        centerX
+                     else
+                        [ width fill
+                        , spacing (Rel.size model.size MainSpacing |> round)
+                        , centerY
+                        ]
+                    )
+                    -- [ width fill, spacing (Rel.size model.size MainSpacing |> round) ]
+                    [ Input.button
+                        [ if model.scheduleShown then
+                            paddingXY (round <| Rel.size model.size MoonClockPadding) 0
+
+                          else
+                            centerX
+                        ]
+                        { label =
+                            el []
+                                (Clock.new
+                                    { size =
+                                        Rel.size model.size <|
+                                            if model.scheduleShown then
+                                                MoonClock
+
+                                            else
+                                                Clock
+                                    , zone = model.zone
+                                    , now = model.time
+                                    , faceColor = colors.foreground
+                                    , handColor = colors.background
+                                    }
+                                    |> Clock.withEvents
+                                        (Dict.keys model.schedule
+                                            |> List.map Time.millisToPosix
+                                        )
+                                    |> Clock.view
+                                )
+                        , onPress = Just ScheduleToggled
+                        }
+                    , Input.button [ width fill ]
+                        { label = viewDate model
+                        , onPress =
+                            if model.scheduleShown then
+                                Just ScheduleToggled
+
+                            else
+                                Just DateToggled
+                        }
                     ]
-                    { label =
-                        el []
-                            (Clock.new
-                                { size =
-                                    Rel.size model.size <|
-                                        if model.scheduleShown then
-                                            MoonClock
-
-                                        else
-                                            Clock
-                                , zone = model.zone
-                                , now = model.time
-                                , faceColor = colors.foreground
-                                , handColor = colors.background
+                , if model.scheduleShown then
+                    row [ width fill ]
+                        [ el
+                            [ width fill
+                            ]
+                            none
+                        , if model.poolNameShown then
+                            Input.text
+                                (inputStyling
+                                    ++ [ onEnter AddToPoolRequested
+                                       , htmlAttribute <| Html.Attributes.id ids.poolInput
+                                       , Bg.color colors.background
+                                       ]
+                                )
+                                { onChange = PoolnameInputChanged
+                                , text = model.currentPoolnameInput
+                                , placeholder = Nothing
+                                , label = Input.labelHidden "Poolname"
                                 }
-                                |> Clock.withEvents
-                                    (Dict.keys model.schedule
-                                        |> List.map Time.millisToPosix
-                                    )
-                                |> Clock.view
-                            )
-                    , onPress = Just ScheduleToggled
-                    }
-                , Input.button [ width fill ]
-                    { label = viewDate model
-                    , onPress =
-                        if model.scheduleShown then
-                            Just ScheduleToggled
 
-                        else
-                            Just DateToggled
-                    }
-                ]
-            , if model.scheduleShown then
-                let
-                    inputStyling =
-                        [ -- , width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.5
-                          Bg.color colors.schedule
-                        , Font.color colors.foreground
-                        , Border.color <| rgb 0.1 0.1 0.1
-                        , Border.widthEach { bottom = 4, top = 0, left = 0, right = 0 }
-                        , focused [ Border.color colors.accent ]
-                        , paddingXY 0 5
-
-                        -- , Font.center
+                          else
+                            none
+                        , Input.button [ Font.color colors.foreground ]
+                            { onPress = Just PoolNameInputToggled
+                            , label = el [ padding 10 ] <| text ": :"
+                            }
                         ]
 
-                    inputAttributes =
-                        onEnter AddEventPressed :: inputStyling
-                in
+                  else
+                    none
+                ]
+            , if model.scheduleShown then
                 column
                     [ width fill
                     , height fill
@@ -535,27 +580,27 @@ view model =
                                ]
                         )
                     , el [ height fill ] none
-                    , row [ width fill ]
-                        [ Input.button [ Font.color colors.foreground ]
-                            { onPress = Just PoolNameInputToggled
-                            , label = el [ padding 10 ] <| text "::"
-                            }
-                        , if model.poolNameShown then
-                            Input.text
-                                (inputStyling
-                                    ++ [ onEnter AddToPoolRequested
-                                       , htmlAttribute <| Html.Attributes.id ids.poolInput
-                                       ]
-                                )
-                                { onChange = PoolnameInputChanged
-                                , text = model.currentPoolnameInput
-                                , placeholder = Nothing
-                                , label = Input.labelHidden "Poolname"
-                                }
 
-                          else
-                            none
-                        ]
+                    -- , row [ width fill ]
+                    --     [ Input.button [ Font.color colors.foreground ]
+                    --         { onPress = Just PoolNameInputToggled
+                    --         , label = el [ padding 10 ] <| text "::"
+                    --         }
+                    --     , if model.poolNameShown then
+                    --         Input.text
+                    --             (inputStyling
+                    --                 ++ [ onEnter AddToPoolRequested
+                    --                    , htmlAttribute <| Html.Attributes.id ids.poolInput
+                    --                    ]
+                    --             )
+                    --             { onChange = PoolnameInputChanged
+                    --             , text = model.currentPoolnameInput
+                    --             , placeholder = Nothing
+                    --             , label = Input.labelHidden "Poolname"
+                    --             }
+                    --       else
+                    --         none
+                    --     ]
                     ]
 
               else
