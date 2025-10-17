@@ -159,12 +159,21 @@ update msg model =
 
         ScheduleToggled ->
             if model.scheduleShown then
+                --About to hide the schedule
+                let
+                    cleanedSchedule =
+                        Dict.filter (\key _ -> not (Set.member key model.deletedEvents)) model.schedule
+                in
                 ( { model
                     | scheduleShown = not model.scheduleShown
-                    , schedule = Dict.filter (\key _ -> not (Set.member key model.deletedEvents)) model.schedule
+                    , schedule = cleanedSchedule
                     , deletedEvents = Set.empty
                   }
-                , Cmd.none
+                , if Set.isEmpty model.deletedEvents then
+                    Cmd.none
+
+                  else
+                    sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
                 )
 
             else
@@ -177,6 +186,9 @@ update msg model =
                 ( { model
                     | scheduleShown = not model.scheduleShown
                     , schedule = cleanedSchedule
+                    , currentHourInput = ""
+                    , currentMinutesInput = ""
+                    , currentDescInput = ""
                   }
                 , Cmd.batch
                     [ if Dict.size pastEvents > 0 then
