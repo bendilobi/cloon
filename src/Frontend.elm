@@ -377,7 +377,8 @@ view model =
     let
         inputStyling =
             [ -- , width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.5
-              Bg.color colors.schedule
+              --   Bg.color colors.schedule
+              Bg.color <| rgba 0 0 0 0
             , Font.color colors.foreground
             , Border.color <| rgb 0.1 0.1 0.1
             , Border.widthEach { bottom = 4, top = 0, left = 0, right = 0 }
@@ -433,7 +434,6 @@ view model =
                         , centerY
                         ]
                     )
-                    -- [ width fill, spacing (Rel.size model.size MainSpacing |> round) ]
                     [ Input.button
                         [ if model.scheduleShown then
                             paddingXY (round <| Rel.size model.size MoonClockPadding) 0
@@ -475,7 +475,10 @@ view model =
                         }
                     ]
                 , if model.scheduleShown then
-                    row [ width fill ]
+                    row
+                        [ width fill
+                        , Font.size <| round <| Rel.size model.size ScheduleFontSize
+                        ]
                         [ el
                             [ width fill
                             ]
@@ -485,7 +488,6 @@ view model =
                                 (inputStyling
                                     ++ [ onEnter AddToPoolRequested
                                        , htmlAttribute <| Html.Attributes.id ids.poolInput
-                                       , Bg.color colors.background
                                        ]
                                 )
                                 { onChange = PoolnameInputChanged
@@ -498,7 +500,7 @@ view model =
                             none
                         , Input.button [ Font.color colors.foreground ]
                             { onPress = Just PoolNameInputToggled
-                            , label = el [ padding 10 ] <| text ": :"
+                            , label = el [ padding (round <| Rel.size model.size ButtonPadding) ] <| text ": :"
                             }
                         ]
 
@@ -514,93 +516,87 @@ view model =
                     [ column
                         -- schedule
                         [ width fill
+                        , height fill
                         , padding <| round <| Rel.size model.size SchedulePadding
                         , Font.color <| colors.foreground
                         , Font.size <| round <| Rel.size model.size ScheduleFontSize
                         , spacing <| round <| Rel.size model.size ScheduleLineSpacing
+                        , clip
+                        , scrollbarY
+
+                        {- This fixes a problem with recent versions of Chromium/Chrome
+                           (see https://github.com/mdgriffith/elm-ui/issues/367)
+                        -}
+                        , htmlAttribute <| Html.Attributes.style "min-height" "auto"
                         ]
-                        ((model.schedule
+                        (model.schedule
                             |> Dict.toList
                             |> List.map (viewEvent model)
-                         )
-                            ++ [ el [ height <| px <| round <| Rel.size model.size ScheduleLineSpacing * 0.5 ] none
-                               , row
-                                    [ width fill
-                                    , spacing 0
-                                    ]
-                                    [ Input.text
-                                        (inputAttributes
-                                            ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
-                                               , Font.alignRight
-                                               , htmlAttribute <| Html.Attributes.id ids.hoursInput
-                                               ]
-                                        )
-                                        { onChange = HourInputChanged
-                                        , text = model.currentHourInput
-                                        , placeholder = Nothing
-                                        , label = Input.labelHidden "Hours"
-                                        }
-                                    , el
-                                        (inputAttributes
-                                            ++ [ Font.color <| rgb 0.3 0.3 0.3
-                                               , Border.width 0
-                                               ]
-                                        )
-                                      <|
-                                        text ":"
-                                    , Input.text
-                                        (inputAttributes
-                                            ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
-                                               , Font.alignLeft
-                                               , htmlAttribute <| Html.Attributes.id ids.minutesInput
-                                               ]
-                                        )
-                                        { onChange = MinutesInputChanged
-                                        , text = model.currentMinutesInput
-                                        , placeholder = Nothing
-                                        , label = Input.labelHidden "Minutes"
-                                        }
-                                    , el [ width <| px <| round <| Rel.size model.size ScheduleLineSpacing ] none
-                                    , Input.text
-                                        (inputAttributes
-                                            ++ [ width (fill |> maximum (Rel.size model.size ScheduleFontSize * (maxDescriptionCharacters * 0.5) |> round))
-                                               , htmlAttribute <| Html.Attributes.id ids.descInput
-                                               ]
-                                        )
-                                        { onChange = DescInputChanged
-                                        , text = model.currentDescInput
-                                        , placeholder = Nothing
-                                        , label = Input.labelHidden "Description"
-                                        }
-                                    , Input.button [ Font.color <| rgb 0.3 0.3 0.3 ]
-                                        { onPress = Just AddEventPressed
-                                        , label = el [ paddingXY 10 0 ] <| text "+"
-                                        }
-                                    ]
-                               ]
                         )
-                    , el [ height fill ] none
-
-                    -- , row [ width fill ]
-                    --     [ Input.button [ Font.color colors.foreground ]
-                    --         { onPress = Just PoolNameInputToggled
-                    --         , label = el [ padding 10 ] <| text "::"
-                    --         }
-                    --     , if model.poolNameShown then
-                    --         Input.text
-                    --             (inputStyling
-                    --                 ++ [ onEnter AddToPoolRequested
-                    --                    , htmlAttribute <| Html.Attributes.id ids.poolInput
-                    --                    ]
-                    --             )
-                    --             { onChange = PoolnameInputChanged
-                    --             , text = model.currentPoolnameInput
-                    --             , placeholder = Nothing
-                    --             , label = Input.labelHidden "Poolname"
-                    --             }
-                    --       else
-                    --         none
-                    --     ]
+                    , el
+                        [ width fill
+                        , above <|
+                            row
+                                {- Event entry fields -}
+                                [ width fill
+                                , spacing 0
+                                , Bg.color <| rgba 0 0 0 0.6
+                                , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
+                                , paddingXY (round <| Rel.size model.size SchedulePadding)
+                                    (round <| Rel.size model.size EventInputPaddingY)
+                                , Font.size <| round <| Rel.size model.size ScheduleFontSize
+                                ]
+                                [ Input.text
+                                    (inputAttributes
+                                        ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
+                                           , Font.alignRight
+                                           , htmlAttribute <| Html.Attributes.id ids.hoursInput
+                                           ]
+                                    )
+                                    { onChange = HourInputChanged
+                                    , text = model.currentHourInput
+                                    , placeholder = Nothing
+                                    , label = Input.labelHidden "Hours"
+                                    }
+                                , el
+                                    (inputAttributes
+                                        ++ [ Font.color <| rgb 0.3 0.3 0.3
+                                           , Border.width 0
+                                           ]
+                                    )
+                                  <|
+                                    text ":"
+                                , Input.text
+                                    (inputAttributes
+                                        ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
+                                           , Font.alignLeft
+                                           , htmlAttribute <| Html.Attributes.id ids.minutesInput
+                                           ]
+                                    )
+                                    { onChange = MinutesInputChanged
+                                    , text = model.currentMinutesInput
+                                    , placeholder = Nothing
+                                    , label = Input.labelHidden "Minutes"
+                                    }
+                                , el [ width <| px <| round <| Rel.size model.size ScheduleLineSpacing ] none
+                                , Input.text
+                                    (inputAttributes
+                                        ++ [ width fill
+                                           , htmlAttribute <| Html.Attributes.id ids.descInput
+                                           ]
+                                    )
+                                    { onChange = DescInputChanged
+                                    , text = model.currentDescInput
+                                    , placeholder = Nothing
+                                    , label = Input.labelHidden "Description"
+                                    }
+                                , Input.button [ Font.color <| rgb 0.3 0.3 0.3 ]
+                                    { onPress = Just AddEventPressed
+                                    , label = el [ paddingXY (round <| Rel.size model.size ButtonPadding) 0 ] <| text "+"
+                                    }
+                                ]
+                        ]
+                        none
                     ]
 
               else

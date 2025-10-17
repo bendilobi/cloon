@@ -15,6 +15,8 @@ type SizeRelation
     | SchedulePadding
     | ScheduleFontSize
     | ScheduleLineSpacing
+    | EventInputPaddingY
+    | ButtonPadding
 
 
 size : Float -> SizeRelation -> Float
@@ -59,4 +61,10 @@ size baseSize sizeRelation =
 
             ScheduleLineSpacing ->
                 0.05
+
+            EventInputPaddingY ->
+                0.015
+
+            ButtonPadding ->
+                0.03
           )
