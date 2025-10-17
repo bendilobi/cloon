@@ -493,7 +493,7 @@ view model =
                             ]
                             none
                         , if model.poolNameShown then
-                            Input.text
+                            Input.newPassword
                                 (inputStyling
                                     ++ [ onEnter AddToPoolRequested
                                        , htmlAttribute <| Html.Attributes.id ids.poolInput
@@ -503,6 +503,7 @@ view model =
                                 , text = model.currentPoolnameInput
                                 , placeholder = Nothing
                                 , label = Input.labelHidden "Poolname"
+                                , show = False
                                 }
 
                           else
