@@ -208,7 +208,7 @@ update msg model =
                             False
 
                         Just hours ->
-                            hours > 2
+                            hours > 2 || newHour == "00"
             in
             ( { model
                 | currentHourInput =
@@ -315,13 +315,6 @@ update msg model =
             )
 
         DeleteEventPressed millis ->
-            -- let
-            --     newSchedule =
-            --         Dict.remove millis model.schedule
-            -- in
-            -- ( { model | schedule = newSchedule }
-            -- , sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
-            -- )
             ( { model
                 | deletedEvents =
                     if Set.member millis model.deletedEvents then
