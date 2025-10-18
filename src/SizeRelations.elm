@@ -72,10 +72,10 @@ size baseSize sizeRelation =
                 0.015
 
             ButtonPadding ->
-                0.03
+                0.04
 
             InputFieldPaddingY ->
-                0.005
+                0.007
 
             InputFieldUnderline ->
                 0.01

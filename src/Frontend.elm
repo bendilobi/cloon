@@ -453,14 +453,13 @@ view : Model -> Html FrontendMsg
 view model =
     let
         inputStyling =
-            [ -- , width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.5
-              --   Bg.color colors.schedule
-              Bg.color <| rgba 0 0 0 0
+            [ Bg.color <| rgba 0 0 0 0
             , Font.color colors.foreground
             , Border.color colors.disabled
             , Border.widthEach { bottom = round <| Rel.size model.size InputFieldUnderline, top = 0, left = 0, right = 0 }
             , focused [ Border.color colors.accent ]
             , paddingXY 0 (round <| Rel.size model.size InputFieldPaddingY)
+            , htmlAttribute <| Html.Attributes.autocomplete False
             ]
 
         inputAttributes =
@@ -638,7 +637,7 @@ view model =
                                 , Bg.color <| rgba 0 0 0 1 --0.6
 
                                 -- , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
-                                , paddingXY (round <| Rel.size model.size SchedulePadding)
+                                , paddingXY (round <| Rel.size model.size SchedulePadding * 0.2)
                                     (round <| Rel.size model.size EventInputPaddingY)
                                 , Font.size <| round <| Rel.size model.size ScheduleFontSize
                                 ]
