@@ -14,6 +14,13 @@ type alias Schedule =
     Dict Int String
 
 
+type TimeIncrement
+    = Fifteen
+    | Thirty
+    | Sixty
+    | Ninety
+
+
 type alias FrontendModel =
     { key : Key
     , version : String
@@ -34,6 +41,8 @@ type alias FrontendModel =
     , eventInputFocused : Bool
     , eventReadyForAdding : Bool
     , deletedEvents : Set Int
+    , addTimeListShown : Bool
+    , hoveringOverIncrement : Maybe TimeIncrement
     }
 
 
@@ -71,6 +80,9 @@ type FrontendMsg
     | PoolNameInputToggled
     | MouseEntered (Maybe Int)
     | EventInputFocused Bool
+    | ShowTimeList Bool
+    | AddTimeIncrement TimeIncrement
+    | MouseOverIncrement (Maybe TimeIncrement)
 
 
 type ToBackend

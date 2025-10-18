@@ -74,6 +74,8 @@ init url key =
       , eventInputFocused = False
       , eventReadyForAdding = False
       , deletedEvents = Set.empty
+      , addTimeListShown = False
+      , hoveringOverIncrement = Nothing
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -364,6 +366,45 @@ update msg model =
             , Cmd.none
             )
 
+        ShowTimeList showIt ->
+            ( { model | addTimeListShown = showIt }
+            , Cmd.none
+            )
+
+        AddTimeIncrement inc ->
+            let
+                minute =
+                    case inc of
+                        Fifteen ->
+                            15
+
+                        Thirty ->
+                            30
+
+                        Sixty ->
+                            60
+
+                        Ninety ->
+                            90
+
+                timeParts =
+                    Time.Extra.add Time.Extra.Minute minute model.zone model.time
+                        |> Time.Extra.posixToParts model.zone
+            in
+            ( { model
+                | currentHourInput = timeParts.hour |> String.fromInt
+                , currentMinutesInput = timeParts.minute |> String.fromInt |> String.padLeft 2 '0'
+                , addTimeListShown = False
+                , eventReadyForAdding = True
+              }
+            , Browser.Dom.focus ids.descInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+            )
+
+        MouseOverIncrement inc ->
+            ( { model | hoveringOverIncrement = inc }
+            , Cmd.none
+            )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -590,13 +631,42 @@ view model =
                                 {- Event entry fields -}
                                 [ width fill
                                 , spacing 0
-                                , Bg.color <| rgba 0 0 0 0.6
-                                , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
+                                , Bg.color <| rgba 0 0 0 1 --0.6
+
+                                -- , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
                                 , paddingXY (round <| Rel.size model.size SchedulePadding)
                                     (round <| Rel.size model.size EventInputPaddingY)
                                 , Font.size <| round <| Rel.size model.size ScheduleFontSize
                                 ]
-                                [ Input.text
+                                [ Input.button
+                                    [ inFront <|
+                                        if model.addTimeListShown then
+                                            viewAddTimeList model
+
+                                        else
+                                            none
+                                    , Events.onMouseEnter <| ShowTimeList True
+                                    , Events.onMouseLeave <| ShowTimeList False
+                                    ]
+                                    { onPress =
+                                        if model.addTimeListShown then
+                                            Nothing
+
+                                        else
+                                            Just <| ShowTimeList True
+                                    , label =
+                                        el
+                                            [ paddingXY (round <| Rel.size model.size ButtonPadding) 0
+                                            , Font.color colors.disabled
+                                            ]
+                                        <|
+                                            (FeatherIcons.plus
+                                                |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
+                                                |> FeatherIcons.toHtml []
+                                                |> html
+                                            )
+                                    }
+                                , Input.text
                                     (inputAttributes
                                         ++ focusHandlingAttrs
                                         ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
@@ -662,7 +732,13 @@ view model =
 
                                         else
                                             Nothing
-                                    , label = el [ paddingXY (round <| Rel.size model.size ButtonPadding) 0 ] <| text "+"
+                                    , label =
+                                        el [ paddingXY (round <| Rel.size model.size ButtonPadding) 0 ] <|
+                                            (FeatherIcons.cornerDownLeft
+                                                |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
+                                                |> FeatherIcons.toHtml []
+                                                |> html
+                                            )
                                     }
                                 ]
                         ]
@@ -689,6 +765,70 @@ onEnter msg =
                     )
             )
         )
+
+
+viewAddTimeList : Model -> Element FrontendMsg
+viewAddTimeList model =
+    let
+        size =
+            Rel.size model.size
+
+        options =
+            [ Fifteen, Thirty, Sixty, Ninety ]
+
+        item inc =
+            Input.button
+                [ Events.onMouseEnter <| MouseOverIncrement <| Just inc
+                , Events.onMouseLeave <| MouseOverIncrement <| Nothing
+                ]
+                { onPress = Just <| AddTimeIncrement inc
+                , label =
+                    el
+                        [ Font.size <| round <| size AddTimeListFont
+                        , Font.color <|
+                            case model.hoveringOverIncrement of
+                                Nothing ->
+                                    colors.foreground
+
+                                Just i ->
+                                    if i == inc then
+                                        colors.accent
+
+                                    else
+                                        colors.foreground
+                        ]
+                    <|
+                        text <|
+                            case inc of
+                                Fifteen ->
+                                    "+15"
+
+                                Thirty ->
+                                    "+30"
+
+                                Sixty ->
+                                    "+60"
+
+                                Ninety ->
+                                    "+90"
+                }
+    in
+    options
+        |> List.map item
+        |> column
+            [ Bg.color <| rgba 0 0 0 0.6
+            , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
+            , moveUp
+                ((size ScheduleFontSize * (List.length options - 1 |> toFloat))
+                    + ((List.length options - 2 |> toFloat) * size AddTimeListSpacing)
+                    + size AddTimeListPadding
+                )
+            , Border.rounded <| round <| size RoundedBorder
+            , Font.color colors.foreground
+            , padding <| round <| size AddTimeListPadding
+            , spacing <| round <| size AddTimeListSpacing
+            , centerX
+            ]
 
 
 viewEvent : Model -> ( Int, String ) -> Element FrontendMsg
