@@ -478,6 +478,10 @@ view model =
         [ Bg.color colors.background
         , Events.onMouseEnter <| MouseOver True
         , Events.onMouseLeave <| MouseOver False
+        , Font.family
+            [ Font.typeface "Verdana"
+            , Font.sansSerif
+            ]
         ]
     <|
         column
@@ -860,27 +864,28 @@ viewEvent model ( millis, description ) =
         [ spacing <| round <| Rel.size model.size ScheduleLineSpacing
         , Events.onMouseEnter <| MouseEntered <| Just millis
         , Events.onMouseLeave <| MouseEntered Nothing
+        , width fill
         ]
-        [ paragraph
+        [ row
             (if Set.member millis model.deletedEvents then
-                [ Font.strike ]
+                [ width fill, Font.strike ]
 
              else
-                []
+                [ width fill ]
             )
-            [ el [ Font.color colors.schedule ] <|
+            [ el [ alignTop, Font.color colors.schedule ] <|
                 if timeParts.hour < 10 then
                     text "0"
 
                 else
                     none
-            , el [] <|
+            , el [ alignTop ] <|
                 text <|
                     (timeParts.hour |> String.fromInt)
                         ++ ":"
                         ++ (timeParts.minute |> String.fromInt |> String.padLeft 2 '0')
                         ++ "  "
-                        ++ description
+            , paragraph [ width fill, alignTop ] [ text description ]
             ]
         , if model.mouseHoveringOver == Just millis then
             Input.button []
