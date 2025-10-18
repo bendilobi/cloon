@@ -12,6 +12,7 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input exposing (focusedOnLoad)
+import FeatherIcons
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
@@ -514,25 +515,36 @@ view model =
                             [ width fill
                             ]
                             none
-                        , if model.poolNameShown then
-                            Input.newPassword
-                                (inputStyling
-                                    ++ [ onEnter AddToPoolRequested
-                                       , htmlAttribute <| Html.Attributes.id ids.poolInput
-                                       ]
-                                )
-                                { onChange = PoolnameInputChanged
-                                , text = model.currentPoolnameInput
-                                , placeholder = Nothing
-                                , label = Input.labelHidden "Poolname"
-                                , show = False
-                                }
+                        , Input.button
+                            [ Font.color colors.foreground
+                            , onLeft <|
+                                if model.poolNameShown then
+                                    Input.currentPassword
+                                        (inputStyling
+                                            ++ [ onEnter AddToPoolRequested
+                                               , htmlAttribute <| Html.Attributes.id ids.poolInput
+                                               , width <| px <| round <| Rel.size model.size ScheduleFontSize * 11
+                                               , centerY
+                                               ]
+                                        )
+                                        { onChange = PoolnameInputChanged
+                                        , text = model.currentPoolnameInput
+                                        , placeholder = Nothing
+                                        , label = Input.labelHidden "Poolname"
+                                        , show = False
+                                        }
 
-                          else
-                            none
-                        , Input.button [ Font.color colors.foreground ]
+                                else
+                                    none
+                            ]
                             { onPress = Just PoolNameInputToggled
-                            , label = el [ padding (round <| Rel.size model.size ButtonPadding) ] <| text ": :"
+                            , label =
+                                el [ padding (round <| Rel.size model.size ButtonPadding) ] <|
+                                    (FeatherIcons.share2
+                                        |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
+                                        |> FeatherIcons.toHtml []
+                                        |> html
+                                    )
                             }
                         ]
 
@@ -692,7 +704,17 @@ viewEvent model ( millis, description ) =
                 , transparent <| model.mouseHoveringOver /= Just millis
                 ]
             <|
-                text "x"
+                -- text "x"
+                ((if Set.member millis model.deletedEvents then
+                    FeatherIcons.rotateCcw
+
+                  else
+                    FeatherIcons.delete
+                 )
+                    |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
+                    |> FeatherIcons.toHtml []
+                    |> html
+                )
     in
     row
         [ spacing <| round <| Rel.size model.size ScheduleLineSpacing
