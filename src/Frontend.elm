@@ -433,7 +433,7 @@ colors =
     , background = rgb255 21 35 65
     , schedule = rgb255 0 15 8
     , accent = rgb255 187 136 0
-    , disabled = rgb 0.15 0.15 0.15
+    , disabled = rgb 0.2 0.2 0.2
     }
 
 
@@ -555,13 +555,9 @@ view model =
                         [ width fill
                         , Font.size <| round <| Rel.size model.size ScheduleFontSize
                         ]
-                        [ el
-                            [ width fill
-                            ]
-                            none
-                        , Input.button
-                            [ Font.color colors.foreground
-                            , onLeft <|
+                        [ el [ width fill ] none
+                        , el
+                            [ onLeft <|
                                 if model.poolNameShown then
                                     Input.currentPassword
                                         (inputStyling
@@ -581,15 +577,19 @@ view model =
                                 else
                                     none
                             ]
-                            { onPress = Just PoolNameInputToggled
-                            , label =
-                                el [ padding (round <| Rel.size model.size ButtonPadding) ] <|
-                                    (FeatherIcons.share2
-                                        |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
-                                        |> FeatherIcons.toHtml []
-                                        |> html
-                                    )
-                            }
+                          <|
+                            Input.button
+                                [ Font.color colors.foreground
+                                ]
+                                { onPress = Just PoolNameInputToggled
+                                , label =
+                                    el [ padding (round <| Rel.size model.size ButtonPadding) ] <|
+                                        (FeatherIcons.share2
+                                            |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
+                                            |> FeatherIcons.toHtml []
+                                            |> html
+                                        )
+                                }
                         ]
 
                   else
