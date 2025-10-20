@@ -184,7 +184,7 @@ update msg model =
                 let
                     ( cleanedSchedule, pastEvents ) =
                         model.schedule
-                            |> Dict.partition (\millis _ -> millis >= Time.posixToMillis model.time)
+                            |> Dict.partition (\millis _ -> millis >= (Time.posixToMillis model.time - (Clock.eventHotTime * 60000 |> round) // 2))
                 in
                 ( { model
                     | scheduleShown = not model.scheduleShown

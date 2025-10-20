@@ -1,4 +1,4 @@
-module Components.Clock exposing (new, view, withEvents)
+module Components.Clock exposing (eventHotTime, new, view, withEvents)
 
 import Color
 import Color.Convert
@@ -20,6 +20,10 @@ type Clock
         , faceColor : Ui.Color
         , events : List Time.Posix
         }
+
+
+eventHotTime =
+    5
 
 
 new :
@@ -44,11 +48,11 @@ new props =
 withEvents : List Time.Posix -> Clock -> Clock
 withEvents events (Settings settings) =
     let
-        withinNextHour : Time.Posix -> Time.Posix -> Bool
-        withinNextHour now target =
+        withinNextHour : Time.Zone -> Time.Posix -> Time.Posix -> Bool
+        withinNextHour zone now target =
             let
                 n =
-                    now |> Time.posixToMillis
+                    Time.Extra.add Time.Extra.Millisecond -((eventHotTime * 60000) / 2 |> round) zone now |> Time.posixToMillis
 
                 t =
                     target |> Time.posixToMillis
@@ -59,7 +63,7 @@ withEvents events (Settings settings) =
             in
             n < t && t < td
     in
-    Settings { settings | events = List.filter (withinNextHour settings.now) events }
+    Settings { settings | events = List.filter (withinNextHour settings.zone settings.now) events }
 
 
 colorToHex : Ui.Color -> String
@@ -117,7 +121,7 @@ view (Settings settings) =
                         []
 
                     Just posix ->
-                        if Time.Extra.diff Time.Extra.Minute settings.zone settings.now posix < 30 then
+                        if Time.Extra.compare posix settings.now == GT && Time.Extra.diff Time.Extra.Minute settings.zone settings.now posix < 30 then
                             [ viewEventArc radius
                                 radius
                                 radiusStr
@@ -135,7 +139,7 @@ view (Settings settings) =
                        , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
                        , viewQuarterLine settings.handColor quarterLineWidth radius 1
                        ]
-                    ++ List.map (viewEvent radius settings.zone) settings.events
+                    ++ List.map (viewEvent radius settings.zone settings.now) settings.events
                     ++ [ viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
                        , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
                        ]
@@ -198,9 +202,12 @@ viewHand color width length radius radiusStr turns =
         []
 
 
-viewEvent : Float -> Time.Zone -> Time.Posix -> Svg msg
-viewEvent radius zone eventPosix =
+viewEvent : Float -> Time.Zone -> Time.Posix -> Time.Posix -> Svg msg
+viewEvent radius zone now eventPosix =
     let
+        eventIsHot =
+            (Time.Extra.diff Time.Extra.Millisecond zone now eventPosix |> toFloat) < ((eventHotTime * 60000) / 2)
+
         minutes =
             Time.toMinute zone eventPosix |> toFloat
 
@@ -212,7 +219,11 @@ viewEvent radius zone eventPosix =
 
         segmentSize =
             -- Size of the event segment in minutes
-            2
+            if eventIsHot then
+                eventHotTime
+
+            else
+                2
 
         calcPos parts =
             let
@@ -237,8 +248,20 @@ viewEvent radius zone eventPosix =
     Svg.path
         [ d
             ("M {{x1}} {{y1}} L {{x2}} {{y2}} A {{radius}} {{radius}} 0 0 1 {{x3}} {{y3}} Z"
-                |> String.Format.namedValue "x1" (radius + (radius / 100 * 80) * cos (angle eventMinutes) |> String.fromFloat)
-                |> String.Format.namedValue "y1" (radius + (radius / 100 * 80) * sin (angle eventMinutes) |> String.fromFloat)
+                |> String.Format.namedValue "x1"
+                    (if eventIsHot then
+                        radius |> String.fromFloat
+
+                     else
+                        radius + (radius / 100 * 80) * cos (angle eventMinutes) |> String.fromFloat
+                    )
+                |> String.Format.namedValue "y1"
+                    (if eventIsHot then
+                        radius |> String.fromFloat
+
+                     else
+                        radius + (radius / 100 * 80) * sin (angle eventMinutes) |> String.fromFloat
+                    )
                 |> String.Format.namedValue "x2" (radius + radius * cos (angle eventMinus) |> String.fromFloat)
                 |> String.Format.namedValue "y2" (radius + radius * sin (angle eventMinus) |> String.fromFloat)
                 |> String.Format.namedValue "radius" (String.fromFloat radius)
@@ -247,7 +270,12 @@ viewEvent radius zone eventPosix =
             )
         , stroke "#bb8800"
         , strokeWidth "0"
-        , fill "#bb8800"
+        , fill <|
+            if eventIsHot then
+                "#ff0000"
+
+            else
+                "#bb8800"
         ]
         []
 
