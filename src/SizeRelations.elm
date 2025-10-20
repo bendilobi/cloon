@@ -8,7 +8,7 @@ type SizeRelation
     | MoonClockPadding
     | HandWidth
     | QuarterLineWidth
-    | EventLineWidth
+      -- | EventLineWidth
     | DateBlur
     | DateFont
     | DateCloudShift
@@ -47,9 +47,8 @@ size baseSize sizeRelation =
             QuarterLineWidth ->
                 0.01
 
-            EventLineWidth ->
-                0.027
-
+            -- EventLineWidth ->
+            --     0.027
             DateBlur ->
                 0.02
 

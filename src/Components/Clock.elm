@@ -135,7 +135,7 @@ view (Settings settings) =
                        , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
                        , viewQuarterLine settings.handColor quarterLineWidth radius 1
                        ]
-                    ++ List.map (viewEvent radius (relSize EventLineWidth) settings.zone) settings.events
+                    ++ List.map (viewEvent radius settings.zone) settings.events
                     ++ [ viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
                        , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
                        ]
@@ -198,35 +198,51 @@ viewHand color width length radius radiusStr turns =
         []
 
 
-viewEvent : Float -> Float -> Time.Zone -> Time.Posix -> Svg msg
-viewEvent radius width zone eventPosix =
+viewEvent : Float -> Time.Zone -> Time.Posix -> Svg msg
+viewEvent radius zone eventPosix =
     let
-        turns =
+        eventMinutes =
             (Time.toMinute zone eventPosix |> toFloat) / 60
 
-        t =
+        angle turns =
             2 * pi * (turns - 0.25)
 
-        x_1 =
-            radius + (radius / 100 * 85) * cos t |> String.fromFloat
+        t =
+            angle eventMinutes
 
-        y_1 =
-            radius + (radius / 100 * 85) * sin t |> String.fromFloat
+        segmentSize =
+            -- Size of the event segment in minutes
+            2
 
-        x_2 =
-            radius + radius * cos t |> String.fromFloat
+        eventMinus =
+            Time.Extra.add Time.Extra.Second -((segmentSize * 60) // 2) zone eventPosix
+                |> Time.toMinute zone
+                |> toFloat
+                |> (\m -> m / 60)
 
-        y_2 =
-            radius + radius * sin t |> String.fromFloat
+        eventPlus =
+            Time.Extra.add Time.Extra.Second ((segmentSize * 60) // 2) zone eventPosix
+                |> Time.toMinute zone
+                |> toFloat
+                |> (\m -> m / 60)
+
+        radiusStr =
+            radius |> String.fromFloat
     in
-    line
-        [ x1 x_1
-        , y1 y_1
-        , x2 x_2
-        , y2 y_2
+    Svg.path
+        [ d
+            ("M {{x1}} {{y1}} L {{x2}} {{y2}} A {{radius}} {{radius}} 0 0 1 {{x3}} {{y3}} Z"
+                |> String.Format.namedValue "x1" (radius + (radius / 100 * 80) * cos t |> String.fromFloat)
+                |> String.Format.namedValue "y1" (radius + (radius / 100 * 80) * sin t |> String.fromFloat)
+                |> String.Format.namedValue "x2" (radius + radius * cos (angle eventMinus) |> String.fromFloat)
+                |> String.Format.namedValue "y2" (radius + radius * sin (angle eventMinus) |> String.fromFloat)
+                |> String.Format.namedValue "radius" (String.fromFloat radius)
+                |> String.Format.namedValue "x3" (radius + radius * cos (angle eventPlus) |> String.fromFloat)
+                |> String.Format.namedValue "y3" (radius + radius * sin (angle eventPlus) |> String.fromFloat)
+            )
         , stroke "#bb8800"
-        , strokeWidth (String.fromFloat width)
-        , strokeLinecap "square"
+        , strokeWidth "0"
+        , fill "#bb8800"
         ]
         []
 
