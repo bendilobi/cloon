@@ -201,39 +201,44 @@ viewHand color width length radius radiusStr turns =
 viewEvent : Float -> Time.Zone -> Time.Posix -> Svg msg
 viewEvent radius zone eventPosix =
     let
+        minutes =
+            Time.toMinute zone eventPosix |> toFloat
+
         eventMinutes =
-            (Time.toMinute zone eventPosix |> toFloat) / 60
+            minutes / 60
 
         angle turns =
             2 * pi * (turns - 0.25)
-
-        t =
-            angle eventMinutes
 
         segmentSize =
             -- Size of the event segment in minutes
             2
 
+        calcPos parts =
+            let
+                minute =
+                    parts.minute |> toFloat
+
+                second =
+                    parts.second |> toFloat
+            in
+            (minute + (second / 60)) / 60
+
         eventMinus =
             Time.Extra.add Time.Extra.Second -((segmentSize * 60) // 2) zone eventPosix
-                |> Time.toMinute zone
-                |> toFloat
-                |> (\m -> m / 60)
+                |> Time.Extra.posixToParts zone
+                |> calcPos
 
         eventPlus =
             Time.Extra.add Time.Extra.Second ((segmentSize * 60) // 2) zone eventPosix
-                |> Time.toMinute zone
-                |> toFloat
-                |> (\m -> m / 60)
-
-        radiusStr =
-            radius |> String.fromFloat
+                |> Time.Extra.posixToParts zone
+                |> calcPos
     in
     Svg.path
         [ d
             ("M {{x1}} {{y1}} L {{x2}} {{y2}} A {{radius}} {{radius}} 0 0 1 {{x3}} {{y3}} Z"
-                |> String.Format.namedValue "x1" (radius + (radius / 100 * 80) * cos t |> String.fromFloat)
-                |> String.Format.namedValue "y1" (radius + (radius / 100 * 80) * sin t |> String.fromFloat)
+                |> String.Format.namedValue "x1" (radius + (radius / 100 * 80) * cos (angle eventMinutes) |> String.fromFloat)
+                |> String.Format.namedValue "y1" (radius + (radius / 100 * 80) * sin (angle eventMinutes) |> String.fromFloat)
                 |> String.Format.namedValue "x2" (radius + radius * cos (angle eventMinus) |> String.fromFloat)
                 |> String.Format.namedValue "y2" (radius + radius * sin (angle eventMinus) |> String.fromFloat)
                 |> String.Format.namedValue "radius" (String.fromFloat radius)
