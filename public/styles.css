@@ -1,0 +1,17 @@
+/* Some fixes to make the PWA look and feel more native */
+html{
+    overscroll-behavior: none;
+    /* Getting rid of flashing rectangle overlay on tap on buttons etc. */
+    -webkit-tap-highlight-color: transparent;
+}
+body {
+    overflow-y: scroll;
+    /* Disable text selection on long press */
+    -webkit-user-select: none;
+    /*Prevent text size inflation on landscape mode:*/
+    text-size-adjust: none;
+    -webkit-text-size-adjust: none;
+    -moz-text-size-adjust: none;
+    /* To disable pull-to-refresh on Android */
+    overscroll-behavior: contain;
+}

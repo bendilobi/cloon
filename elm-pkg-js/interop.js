@@ -43,5 +43,20 @@ exports.init = async function (app) {
         console.log(`fromElm event of tag ${event.tag} not handled`, event);
     }
   });
-
+  setupServiceworker();
 };
+
+function setupServiceworker() {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", async () => {
+      try {
+        const registration = await navigator.serviceWorker.register(
+          "/serviceWorker.js"
+        );
+        console.log("ServiceWorker registration successful");
+      } catch (err) {
+        console.log("ServiceWorker registration failed: ", err);
+      }
+    });
+  }
+}
