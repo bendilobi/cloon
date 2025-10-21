@@ -139,7 +139,7 @@ view (Settings settings) =
                        , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
                        , viewQuarterLine settings.handColor quarterLineWidth radius 1
                        ]
-                    ++ List.map (viewEvent radius settings.zone settings.now) settings.events
+                    ++ List.map (viewEvent radius quarterLineWidth settings.zone settings.now) settings.events
                     ++ [ viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
                        , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
                        ]
@@ -202,8 +202,8 @@ viewHand color width length radius radiusStr turns =
         []
 
 
-viewEvent : Float -> Time.Zone -> Time.Posix -> Time.Posix -> Svg msg
-viewEvent radius zone now eventPosix =
+viewEvent : Float -> Float -> Time.Zone -> Time.Posix -> Time.Posix -> Svg msg
+viewEvent radius lineWidth zone now eventPosix =
     let
         eventIsHot =
             (Time.Extra.diff Time.Extra.Millisecond zone now eventPosix |> toFloat) < ((eventHotTime * 60000) / 2)
@@ -245,39 +245,56 @@ viewEvent radius zone now eventPosix =
                 |> Time.Extra.posixToParts zone
                 |> calcPos
     in
-    Svg.path
-        [ d
-            ("M {{x1}} {{y1}} L {{x2}} {{y2}} A {{radius}} {{radius}} 0 0 1 {{x3}} {{y3}} Z"
-                |> String.Format.namedValue "x1"
-                    (if eventIsHot then
-                        radius |> String.fromFloat
+    g [] <|
+        Svg.path
+            [ d
+                ("M {{x1}} {{y1}} L {{x2}} {{y2}} A {{radius}} {{radius}} 0 0 1 {{x3}} {{y3}} Z"
+                    |> String.Format.namedValue "x1"
+                        (if eventIsHot then
+                            radius |> String.fromFloat
 
-                     else
-                        radius + (radius / 100 * 80) * cos (angle eventMinutes) |> String.fromFloat
-                    )
-                |> String.Format.namedValue "y1"
-                    (if eventIsHot then
-                        radius |> String.fromFloat
+                         else
+                            radius + (radius / 100 * 80) * cos (angle eventMinutes) |> String.fromFloat
+                        )
+                    |> String.Format.namedValue "y1"
+                        (if eventIsHot then
+                            radius |> String.fromFloat
 
-                     else
-                        radius + (radius / 100 * 80) * sin (angle eventMinutes) |> String.fromFloat
-                    )
-                |> String.Format.namedValue "x2" (radius + radius * cos (angle eventMinus) |> String.fromFloat)
-                |> String.Format.namedValue "y2" (radius + radius * sin (angle eventMinus) |> String.fromFloat)
-                |> String.Format.namedValue "radius" (String.fromFloat radius)
-                |> String.Format.namedValue "x3" (radius + radius * cos (angle eventPlus) |> String.fromFloat)
-                |> String.Format.namedValue "y3" (radius + radius * sin (angle eventPlus) |> String.fromFloat)
-            )
-        , stroke "#bb8800"
-        , strokeWidth "0"
-        , fill <|
-            if eventIsHot then
-                "#ff0000"
+                         else
+                            radius + (radius / 100 * 80) * sin (angle eventMinutes) |> String.fromFloat
+                        )
+                    |> String.Format.namedValue "x2" (radius + radius * cos (angle eventMinus) |> String.fromFloat)
+                    |> String.Format.namedValue "y2" (radius + radius * sin (angle eventMinus) |> String.fromFloat)
+                    |> String.Format.namedValue "radius" (String.fromFloat radius)
+                    |> String.Format.namedValue "x3" (radius + radius * cos (angle eventPlus) |> String.fromFloat)
+                    |> String.Format.namedValue "y3" (radius + radius * sin (angle eventPlus) |> String.fromFloat)
+                )
+            , stroke "#bb8800"
+            , strokeWidth "0"
+            , fill <|
+                if eventIsHot then
+                    "#ff0000"
 
-            else
-                "#bb8800"
-        ]
-        []
+                else
+                    "#bb8800"
+            ]
+            []
+            :: (if eventIsHot then
+                    [ line
+                        [ x1 (radius + (radius / 100 * 85) * cos (angle eventMinutes) |> String.fromFloat)
+                        , y1 (radius + (radius / 100 * 85) * sin (angle eventMinutes) |> String.fromFloat)
+                        , x2 (radius + (radius / 100 * 95) * cos (angle eventMinutes) |> String.fromFloat)
+                        , y2 (radius + (radius / 100 * 95) * sin (angle eventMinutes) |> String.fromFloat)
+                        , stroke "#ffffff"
+                        , strokeWidth <| String.fromFloat lineWidth
+                        , strokeLinecap "round"
+                        ]
+                        []
+                    ]
+
+                else
+                    []
+               )
 
 
 viewEventArc : Float -> Float -> String -> Float -> Float -> Int -> Svg msg
