@@ -66,7 +66,11 @@ updateFromFrontend sessionId clientId msg model =
                                     | sessions =
                                         ensurePoolMembership pl.sessions sessionId
                                     , schedule =
-                                        if Time.Extra.compare pl.schedule.lastChanged schedule.lastChanged == GT then
+                                        if
+                                            Time.Extra.compare pl.schedule.lastChanged schedule.lastChanged
+                                                == GT
+                                                || Dict.isEmpty schedule.schedule
+                                        then
                                             pl.schedule
 
                                         else
