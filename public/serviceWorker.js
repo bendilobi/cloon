@@ -55,14 +55,6 @@ self.addEventListener("fetch", (event) => {
 
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse !== undefined) {
-
-
-          return cachedResponse;
-
-        } else {
-          // We only fetch stuff from the server if it isn't already
-          // in our PRECACHE (except the index.html, see above)
           return fetch(event.request).then((response) => {
             if (response.ok) {
               // Only put valid stuff in caches
@@ -72,10 +64,12 @@ self.addEventListener("fetch", (event) => {
               caches.open(PRECACHE).then((cache) => {
                 cache.put(event.request, responseClone);
               });
+              return response;
+            } else if (cachedResponse !== undefined) {
+              return cachedResponse;
             }
-            return response;
+            
           });
-        }
       })
     )
   }
