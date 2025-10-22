@@ -11,7 +11,9 @@ import Url exposing (Url)
 
 
 type alias Schedule =
-    Dict Int String
+    { schedule : Dict Int String
+    , lastChanged : Time.Posix
+    }
 
 
 type TimeIncrement
@@ -49,7 +51,8 @@ type alias FrontendModel =
 type alias Pool =
     { sessions : List SessionId
     , schedule : Schedule
-    , lastChange : Int
+
+    -- , lastChange : Int
     }
 
 
@@ -99,3 +102,4 @@ type BackendMsg
 type ToFrontend
     = NoOpToFrontend
     | NewSchedule Schedule
+    | Connected

@@ -62,7 +62,7 @@ init url key =
       , size = 200
       , dateHidden = True
       , mouseOver = False
-      , schedule = Dict.empty
+      , schedule = { schedule = Dict.empty, lastChanged = Time.millisToPosix 0 }
       , scheduleShown = False
       , currentHourInput = ""
       , currentMinutesInput = ""
@@ -164,8 +164,14 @@ update msg model =
             if model.scheduleShown then
                 --About to hide the schedule
                 let
+                    schedule =
+                        model.schedule
+
                     cleanedSchedule =
-                        Dict.filter (\key _ -> not (Set.member key model.deletedEvents)) model.schedule
+                        { schedule
+                            | schedule = Dict.filter (\key _ -> not (Set.member key model.deletedEvents)) schedule.schedule
+                            , lastChanged = model.time
+                        }
                 in
                 ( { model
                     | scheduleShown = not model.scheduleShown
@@ -182,9 +188,15 @@ update msg model =
             else
                 --About to show the schedule
                 let
-                    ( cleanedSchedule, pastEvents ) =
+                    schedule =
                         model.schedule
+
+                    ( upcomingEvents, pastEvents ) =
+                        schedule.schedule
                             |> Dict.partition (\millis _ -> millis >= (Time.posixToMillis model.time - (Clock.eventHotTime * 60000 |> round) // 2))
+
+                    cleanedSchedule =
+                        { schedule | schedule = upcomingEvents, lastChanged = model.time }
                 in
                 ( { model
                     | scheduleShown = not model.scheduleShown
@@ -302,8 +314,14 @@ update msg model =
                            )
                         |> Time.posixToMillis
 
+                schedule =
+                    model.schedule
+
                 newSchedule =
-                    Dict.insert eventMillis (model.currentDescInput |> String.Extra.clean) model.schedule
+                    { schedule
+                        | schedule = Dict.insert eventMillis (model.currentDescInput |> String.Extra.clean) schedule.schedule
+                        , lastChanged = model.time
+                    }
             in
             ( { model
                 | schedule = newSchedule
@@ -412,6 +430,11 @@ updateFromBackend msg model =
         NoOpToFrontend ->
             ( model, Cmd.none )
 
+        Connected ->
+            ( model
+            , sendToBackend <| JoinPool Nothing model.poolName model.schedule model.time
+            )
+
         NewSchedule schedule ->
             ( { model | schedule = schedule }
             , Cmd.none
@@ -464,6 +487,9 @@ view model =
 
         inputAttributes =
             onEnter AddEventPressed :: inputStyling
+
+        schedule =
+            model.schedule.schedule
     in
     layoutWith
         { options =
@@ -533,7 +559,7 @@ view model =
                                     , handColor = colors.background
                                     }
                                     |> Clock.withEvents
-                                        (Dict.keys model.schedule
+                                        (Dict.keys schedule
                                             |> List.map Time.millisToPosix
                                         )
                                     |> Clock.view
@@ -617,7 +643,7 @@ view model =
                         -}
                         , htmlAttribute <| Html.Attributes.style "min-height" "auto"
                         ]
-                        (model.schedule
+                        (schedule
                             |> Dict.toList
                             |> List.map (viewEvent model)
                         )
