@@ -205,14 +205,14 @@ update msg model =
                     , currentMinutesInput = ""
                     , currentDescInput = ""
                   }
-                , Cmd.batch
-                    [ if Dict.size pastEvents > 0 then
-                        sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
-
-                      else
-                        Cmd.none
-                    , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
-                    ]
+                  -- , Cmd.batch
+                  --     [ if Dict.size pastEvents > 0 then
+                  --         sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
+                  --       else
+                  --         Cmd.none
+                  --     , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+                  --     ]
+                , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
                 )
 
         HourInputChanged newHour ->
