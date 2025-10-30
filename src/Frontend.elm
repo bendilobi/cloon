@@ -196,7 +196,11 @@ update msg model =
                             |> Dict.partition (\millis _ -> millis >= (Time.posixToMillis model.time - (Clock.eventHotTime * 60000 |> round) // 2))
 
                     cleanedSchedule =
-                        { schedule | schedule = upcomingEvents, lastChanged = model.time }
+                        { schedule
+                            | schedule = upcomingEvents
+
+                            -- , lastChanged = model.time
+                        }
                 in
                 ( { model
                     | scheduleShown = not model.scheduleShown

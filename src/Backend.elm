@@ -67,8 +67,7 @@ updateFromFrontend sessionId clientId msg model =
                                         ensurePoolMembership pl.sessions sessionId
                                     , schedule =
                                         if
-                                            Time.Extra.compare pl.schedule.lastChanged schedule.lastChanged
-                                                == GT
+                                            (Time.Extra.compare pl.schedule.lastChanged schedule.lastChanged == GT)
                                                 || Dict.isEmpty schedule.schedule
                                         then
                                             pl.schedule
@@ -80,6 +79,7 @@ updateFromFrontend sessionId clientId msg model =
                                 }
                 in
                 ( { model | pools = Dict.insert poolName pool model.pools }
+                  --TODO: Only broadcast if there was a change
                 , pool.sessions
                     |> List.map (\sId -> sendToFrontend sId <| NewSchedule pool.schedule)
                     |> Cmd.batch
