@@ -90,9 +90,9 @@ type FrontendMsg
 
 type ToBackend
     = NoOpToBackend
-    | JoinPool (Maybe String) String Schedule Time.Posix
-      --TODO: add ChangePool to separate more cleanly from joining
+    | JoinPool String Schedule Time.Posix
     | ScheduleChanged String Schedule Time.Posix
+    | ChangePool String String Schedule Time.Posix
 
 
 type BackendMsg

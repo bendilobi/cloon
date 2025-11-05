@@ -114,7 +114,7 @@ update msg model =
                         , currentPoolnameInput = data.poolName
                         , version = data.version
                       }
-                    , sendToBackend <| JoinPool Nothing data.poolName model.schedule model.time
+                    , sendToBackend <| JoinPool data.poolName model.schedule model.time
                     )
 
                 Ports.NoOp ->
@@ -369,7 +369,7 @@ update msg model =
                 , poolNameShown = False
               }
             , Cmd.batch
-                [ sendToBackend <| JoinPool (Just model.poolName) poolName model.schedule model.time
+                [ sendToBackend <| ChangePool model.poolName poolName model.schedule model.time
                 , Ports.toJs { tag = "StoreSessionPoolName", data = Json.Encode.string model.currentPoolnameInput }
                 ]
             )
@@ -437,10 +437,11 @@ updateFromBackend msg model =
 
         Connected ->
             ( model
-            , sendToBackend <| JoinPool Nothing model.poolName model.schedule model.time
+            , sendToBackend <| JoinPool model.poolName model.schedule model.time
             )
 
         NewSchedule schedule ->
+            --TODO: alte Events rausschmeissen
             ( { model | schedule = schedule }
             , Cmd.none
             )

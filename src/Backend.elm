@@ -48,7 +48,7 @@ updateFromFrontend sessionId clientId msg model =
         NoOpToBackend ->
             ( model, Cmd.none )
 
-        JoinPool previousPoolName poolName schedule time ->
+        JoinPool poolName schedule time ->
             if poolName == Env.hardcodedPoolname then
                 let
                     pool =
@@ -85,7 +85,36 @@ updateFromFrontend sessionId clientId msg model =
                     |> Cmd.batch
                 )
 
-            else if previousPoolName == Just Env.hardcodedPoolname then
+            else
+                --TODO: Maybe give back some error?
+                ( model, Cmd.none )
+
+        ChangePool previousPoolName poolName schedule time ->
+            if poolName == Env.hardcodedPoolname then
+                let
+                    pool =
+                        case Dict.get poolName model.pools of
+                            Nothing ->
+                                {- Pool doesn't exist yet so we create a new one -}
+                                { sessions = [ sessionId ]
+                                , schedule = schedule
+
+                                -- , lastChange = Time.posixToMillis time
+                                }
+
+                            Just pl ->
+                                { pl
+                                    | sessions =
+                                        ensurePoolMembership pl.sessions sessionId
+
+                                    -- , lastChange = Time.posixToMillis time
+                                }
+                in
+                ( { model | pools = Dict.insert poolName pool model.pools }
+                , sendToFrontend sessionId <| NewSchedule pool.schedule
+                )
+
+            else if previousPoolName == Env.hardcodedPoolname then
                 let
                     prevPN =
                         Env.hardcodedPoolname
