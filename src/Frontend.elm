@@ -441,8 +441,18 @@ updateFromBackend msg model =
             )
 
         NewSchedule schedule ->
-            --TODO: alte Events rausschmeissen
-            ( { model | schedule = schedule }
+            let
+                currentSchedule =
+                    model.schedule
+
+                upcomingEvents =
+                    schedule.schedule
+                        |> Dict.filter (\millis _ -> millis >= (Time.posixToMillis model.time - (Clock.eventHotTime * 60000 |> round) // 2))
+
+                cleanedSchedule =
+                    { currentSchedule | schedule = upcomingEvents }
+            in
+            ( { model | schedule = cleanedSchedule }
             , Cmd.none
             )
 
