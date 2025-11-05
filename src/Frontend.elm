@@ -310,11 +310,12 @@ update msg model =
                             , second = 0
                             , millisecond = 0
                         }
-                        |> (if hours < currentTimeParts.hour then
-                                Time.Extra.add Time.Extra.Day 1 model.zone
+                        |> (\psx ->
+                                if Time.Extra.compare psx model.time == LT then
+                                    Time.Extra.add Time.Extra.Day 1 model.zone psx
 
-                            else
-                                identity
+                                else
+                                    psx
                            )
                         |> Time.posixToMillis
 
