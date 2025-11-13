@@ -18,6 +18,7 @@ import Html.Attributes
 import Html.Events
 import Json.Decode as Decode
 import Json.Encode
+import Key
 import Lamdera exposing (sendToBackend)
 import Platform.Cmd as Cmd
 import Ports
@@ -161,63 +162,7 @@ update msg model =
             )
 
         ScheduleToggled ->
-            if model.scheduleShown then
-                --About to hide the schedule
-                let
-                    schedule =
-                        model.schedule
-
-                    cleanedSchedule =
-                        { schedule
-                            | schedule = Dict.filter (\key _ -> not (Set.member key model.deletedEvents)) schedule.schedule
-                            , lastChanged = model.time
-                        }
-                in
-                ( { model
-                    | scheduleShown = not model.scheduleShown
-                    , schedule = cleanedSchedule
-                    , deletedEvents = Set.empty
-                  }
-                , if Set.isEmpty model.deletedEvents then
-                    Cmd.none
-
-                  else
-                    sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
-                )
-
-            else
-                --About to show the schedule
-                let
-                    schedule =
-                        model.schedule
-
-                    ( upcomingEvents, pastEvents ) =
-                        schedule.schedule
-                            |> Dict.partition (\millis _ -> millis >= (Time.posixToMillis model.time - (Clock.eventHotTime * 60000 |> round) // 2))
-
-                    cleanedSchedule =
-                        { schedule
-                            | schedule = upcomingEvents
-
-                            -- , lastChanged = model.time
-                        }
-                in
-                ( { model
-                    | scheduleShown = not model.scheduleShown
-                    , schedule = cleanedSchedule
-                    , currentHourInput = ""
-                    , currentMinutesInput = ""
-                    , currentDescInput = ""
-                  }
-                  -- , Cmd.batch
-                  --     [ if Dict.size pastEvents > 0 then
-                  --         sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
-                  --       else
-                  --         Cmd.none
-                  --     , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
-                  --     ]
-                , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
-                )
+            toggleSchedule model
 
         HourInputChanged newHour ->
             let
@@ -428,6 +373,86 @@ update msg model =
             , Cmd.none
             )
 
+        KeyUp key ->
+            case key of
+                Key.Escape ->
+                    if model.scheduleShown then
+                        toggleSchedule model
+
+                    else
+                        ( model, Cmd.none )
+
+                Key.Enter ->
+                    if model.scheduleShown then
+                        ( model, Cmd.none )
+
+                    else
+                        toggleSchedule model
+
+                _ ->
+                    ( model, Cmd.none )
+
+
+toggleSchedule : Model -> ( Model, Cmd FrontendMsg )
+toggleSchedule model =
+    if model.scheduleShown then
+        --About to hide the schedule
+        let
+            schedule =
+                model.schedule
+
+            cleanedSchedule =
+                { schedule
+                    | schedule = Dict.filter (\key _ -> not (Set.member key model.deletedEvents)) schedule.schedule
+                    , lastChanged = model.time
+                }
+        in
+        ( { model
+            | scheduleShown = not model.scheduleShown
+            , schedule = cleanedSchedule
+            , deletedEvents = Set.empty
+          }
+        , if Set.isEmpty model.deletedEvents then
+            Cmd.none
+
+          else
+            sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
+        )
+
+    else
+        --About to show the schedule
+        let
+            schedule =
+                model.schedule
+
+            ( upcomingEvents, pastEvents ) =
+                schedule.schedule
+                    |> Dict.partition (\millis _ -> millis >= (Time.posixToMillis model.time - (Clock.eventHotTime * 60000 |> round) // 2))
+
+            cleanedSchedule =
+                { schedule
+                    | schedule = upcomingEvents
+
+                    -- , lastChanged = model.time
+                }
+        in
+        ( { model
+            | scheduleShown = not model.scheduleShown
+            , schedule = cleanedSchedule
+            , currentHourInput = ""
+            , currentMinutesInput = ""
+            , currentDescInput = ""
+          }
+          -- , Cmd.batch
+          --     [ if Dict.size pastEvents > 0 then
+          --         sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
+          --       else
+          --         Cmd.none
+          --     , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+          --     ]
+        , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+        )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -463,6 +488,7 @@ subscriptions model =
         [ Time.every 1000 Tick
         , Browser.Events.onResize Resized
         , Ports.toElm GotPortMessage
+        , Browser.Events.onKeyUp (Decode.map KeyUp Key.decoder)
         ]
 
 

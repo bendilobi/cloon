@@ -4,6 +4,7 @@ import Browser exposing (UrlRequest)
 import Browser.Dom
 import Browser.Navigation exposing (Key)
 import Dict exposing (Dict)
+import Key
 import Lamdera exposing (ClientId, SessionId)
 import Set exposing (Set)
 import Time
@@ -86,6 +87,7 @@ type FrontendMsg
     | ShowTimeList Bool
     | AddTimeIncrement TimeIncrement
     | MouseOverIncrement (Maybe TimeIncrement)
+    | KeyUp Key.Key
 
 
 type ToBackend
