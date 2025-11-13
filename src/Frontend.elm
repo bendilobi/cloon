@@ -237,54 +237,58 @@ update msg model =
             )
 
         AddEventPressed ->
-            let
-                hours =
-                    model.currentHourInput |> toInt |> Maybe.withDefault 0
+            if model.currentHourInput == "" then
+                ( model, Cmd.none )
 
-                minutes =
-                    model.currentMinutesInput |> toInt |> Maybe.withDefault 0
+            else
+                let
+                    hours =
+                        model.currentHourInput |> toInt |> Maybe.withDefault 0
 
-                currentTimeParts =
-                    Time.Extra.posixToParts model.zone model.time
+                    minutes =
+                        model.currentMinutesInput |> toInt |> Maybe.withDefault 0
 
-                eventMillis =
-                    Time.Extra.partsToPosix model.zone
-                        { currentTimeParts
-                            | hour = hours
-                            , minute = minutes
-                            , second = 0
-                            , millisecond = 0
+                    currentTimeParts =
+                        Time.Extra.posixToParts model.zone model.time
+
+                    eventMillis =
+                        Time.Extra.partsToPosix model.zone
+                            { currentTimeParts
+                                | hour = hours
+                                , minute = minutes
+                                , second = 0
+                                , millisecond = 0
+                            }
+                            |> (\psx ->
+                                    if Time.Extra.compare psx model.time == LT then
+                                        Time.Extra.add Time.Extra.Day 1 model.zone psx
+
+                                    else
+                                        psx
+                               )
+                            |> Time.posixToMillis
+
+                    schedule =
+                        model.schedule
+
+                    newSchedule =
+                        { schedule
+                            | schedule = Dict.insert eventMillis (model.currentDescInput |> String.Extra.clean) schedule.schedule
+                            , lastChanged = model.time
                         }
-                        |> (\psx ->
-                                if Time.Extra.compare psx model.time == LT then
-                                    Time.Extra.add Time.Extra.Day 1 model.zone psx
-
-                                else
-                                    psx
-                           )
-                        |> Time.posixToMillis
-
-                schedule =
-                    model.schedule
-
-                newSchedule =
-                    { schedule
-                        | schedule = Dict.insert eventMillis (model.currentDescInput |> String.Extra.clean) schedule.schedule
-                        , lastChanged = model.time
-                    }
-            in
-            ( { model
-                | schedule = newSchedule
-                , currentHourInput = ""
-                , currentMinutesInput = ""
-                , currentDescInput = ""
-                , eventReadyForAdding = False
-              }
-            , Cmd.batch
-                [ sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
-                , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
-                ]
-            )
+                in
+                ( { model
+                    | schedule = newSchedule
+                    , currentHourInput = ""
+                    , currentMinutesInput = ""
+                    , currentDescInput = ""
+                    , eventReadyForAdding = False
+                  }
+                , Cmd.batch
+                    [ sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
+                    , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+                    ]
+                )
 
         DeleteEventPressed millis ->
             ( { model
@@ -528,7 +532,8 @@ view model =
             ]
 
         inputAttributes =
-            onEnter AddEventPressed :: inputStyling
+            onEnter AddEventPressed
+                :: inputStyling
 
         schedule =
             model.schedule.schedule
@@ -824,7 +829,7 @@ view model =
 onEnter : msg -> Element.Attribute msg
 onEnter msg =
     Element.htmlAttribute
-        (Html.Events.on "keyup"
+        (Html.Events.on "keydown"
             (Decode.field "key" Decode.string
                 |> Decode.andThen
                     (\key ->
