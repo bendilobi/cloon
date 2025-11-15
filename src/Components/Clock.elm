@@ -2,6 +2,7 @@ module Components.Clock exposing (eventHotTime, new, view, withEvents)
 
 import Color
 import Color.Convert
+import Dict exposing (Dict)
 import Element as Ui exposing (Element)
 import SizeRelations exposing (SizeRelation(..))
 import String.Format
@@ -9,6 +10,7 @@ import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time
 import Time.Extra
+import Types exposing (EventType, ScheduleEvent)
 
 
 type Clock
@@ -18,7 +20,8 @@ type Clock
         , now : Time.Posix
         , handColor : Ui.Color
         , faceColor : Ui.Color
-        , events : List Time.Posix
+        , events : Dict Int ScheduleEvent
+        , eventTypeColors : EventType -> String
         }
 
 
@@ -32,6 +35,7 @@ new :
     , now : Time.Posix
     , handColor : Ui.Color
     , faceColor : Ui.Color
+    , eventTypeColors : EventType -> Ui.Color
     }
     -> Clock
 new props =
@@ -41,29 +45,31 @@ new props =
         , now = props.now
         , handColor = props.handColor
         , faceColor = props.faceColor
-        , events = []
+        , events = Dict.empty
+        , eventTypeColors = props.eventTypeColors >> colorToHex
         }
 
 
-withEvents : List Time.Posix -> Clock -> Clock
+withEvents : Dict Int ScheduleEvent -> Clock -> Clock
 withEvents events (Settings settings) =
     let
-        withinNextHour : Time.Zone -> Time.Posix -> Time.Posix -> Bool
-        withinNextHour zone now target =
+        withinNextHour : Time.Zone -> Time.Posix -> Int -> ScheduleEvent -> Bool
+        withinNextHour zone now target _ =
             let
                 n =
                     Time.Extra.add Time.Extra.Millisecond -((eventHotTime * 60000) / 2 |> round) zone now |> Time.posixToMillis
 
                 t =
-                    target |> Time.posixToMillis
+                    target
 
+                -- |> Time.posixToMillis
                 td =
                     Time.Extra.add Time.Extra.Hour 1 settings.zone now
                         |> Time.posixToMillis
             in
             n < t && t < td
     in
-    Settings { settings | events = List.filter (withinNextHour settings.zone settings.now) events }
+    Settings { settings | events = Dict.filter (withinNextHour settings.zone settings.now) events }
 
 
 colorToHex : Ui.Color -> String
@@ -116,19 +122,23 @@ view (Settings settings) =
             , fill <| colorToHex <| settings.faceColor
             ]
             []
-            :: ((case List.head settings.events of
+            :: ((case List.head (Dict.toList settings.events) of
                     Nothing ->
                         []
 
-                    Just posix ->
+                    Just ( millis, event ) ->
+                        let
+                            posix =
+                                Time.millisToPosix millis
+                        in
                         if Time.Extra.compare posix settings.now == GT && Time.Extra.diff Time.Extra.Minute settings.zone settings.now posix < 30 then
                             [ viewEventArc radius
                                 radius
                                 radiusStr
                                 ((minute + (second / 60)) / 60)
                                 ((Time.toMinute settings.zone posix |> toFloat) / 60)
-                                --TODO: Immer Arc rendern lassen, bei diff < 30 halt voll transparent?
                                 (Time.Extra.diff Time.Extra.Minute settings.zone settings.now posix)
+                                (settings.eventTypeColors event.eventType)
                             ]
 
                         else
@@ -139,7 +149,7 @@ view (Settings settings) =
                        , viewQuarterLine settings.handColor quarterLineWidth radius 0.75
                        , viewQuarterLine settings.handColor quarterLineWidth radius 1
                        ]
-                    ++ List.map (viewEvent radius quarterLineWidth settings.zone settings.now) settings.events
+                    ++ List.map (viewEvent radius quarterLineWidth settings.zone settings.now settings.eventTypeColors) (Dict.toList settings.events)
                     ++ [ viewHand settings.handColor handWidth (radius / 100 * 52) radius radiusStr ((hour + (minute / 60)) / 12)
                        , viewHand settings.handColor handWidth (radius / 100 * 77) radius radiusStr ((minute + (second / 60)) / 60)
                        ]
@@ -202,9 +212,12 @@ viewHand color width length radius radiusStr turns =
         []
 
 
-viewEvent : Float -> Float -> Time.Zone -> Time.Posix -> Time.Posix -> Svg msg
-viewEvent radius lineWidth zone now eventPosix =
+viewEvent : Float -> Float -> Time.Zone -> Time.Posix -> (EventType -> String) -> ( Int, ScheduleEvent ) -> Svg msg
+viewEvent radius lineWidth zone now color ( eventMillis, event ) =
     let
+        eventPosix =
+            Time.millisToPosix eventMillis
+
         eventIsHot =
             (Time.Extra.diff Time.Extra.Millisecond zone now eventPosix |> toFloat) < ((eventHotTime * 60000) / 2)
 
@@ -269,14 +282,16 @@ viewEvent radius lineWidth zone now eventPosix =
                     |> String.Format.namedValue "x3" (radius + radius * cos (angle eventPlus) |> String.fromFloat)
                     |> String.Format.namedValue "y3" (radius + radius * sin (angle eventPlus) |> String.fromFloat)
                 )
-            , stroke "#bb8800"
+            , stroke <| color event.eventType --"#bb8800"
             , strokeWidth "0"
             , fill <|
                 if eventIsHot then
                     "#ff0000"
 
                 else
-                    "#bb8800"
+                    color event.eventType
+
+            --"#bb8800"
             ]
             []
             :: (if eventIsHot then
@@ -297,8 +312,8 @@ viewEvent radius lineWidth zone now eventPosix =
                )
 
 
-viewEventArc : Float -> Float -> String -> Float -> Float -> Int -> Svg msg
-viewEventArc length radius radiusStr thetaStart thetaEnd minuteDiff =
+viewEventArc : Float -> Float -> String -> Float -> Float -> Int -> String -> Svg msg
+viewEventArc length radius radiusStr thetaStart thetaEnd minuteDiff color =
     let
         tStart =
             2 * pi * (thetaStart - 0.25)
@@ -317,9 +332,9 @@ viewEventArc length radius radiusStr thetaStart thetaEnd minuteDiff =
                 |> String.Format.namedValue "x3" (radius + length * cos tEnd |> String.fromFloat)
                 |> String.Format.namedValue "y3" (radius + length * sin tEnd |> String.fromFloat)
             )
-        , stroke "#bb8800"
+        , stroke color --"#bb8800"
         , strokeWidth "0"
-        , fill "#bb8800"
+        , fill color --"#bb8800"
         , fillOpacity <| String.fromFloat <| abs ((minuteDiff |> toFloat) - 30) / 30 --"0.35"
 
         -- , strokeOpacity <| String.fromFloat <| abs ((minuteDiff |> toFloat) - 30) / 30

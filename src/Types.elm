@@ -46,12 +46,14 @@ type alias FrontendModel =
     , size : Float
     , dateHidden : Bool
     , mouseOver : Bool
+    , defaultEventType : EventType
     , schedule : Schedule
     , scheduleShown : Bool
     , currentHourInput : String
     , currentMinutesInput : String
     , currentDescInput : String
     , currentPoolnameInput : String
+    , currentEventType : EventType
     , poolName : String
     , poolNameShown : Bool
     , mouseHoveringOver : Maybe Int
@@ -60,6 +62,7 @@ type alias FrontendModel =
     , deletedEvents : Set Int
     , addTimeListShown : Bool
     , hoveringOverIncrement : Maybe TimeIncrement
+    , eventTypeListShown : Bool
     , hoveringOverEventType : Maybe EventType
     }
 
@@ -102,6 +105,9 @@ type FrontendMsg
     | ShowTimeList Bool
     | AddTimeIncrement TimeIncrement
     | MouseOverIncrement (Maybe TimeIncrement)
+    | ShowEventTypeList Bool
+    | SetEventType EventType
+    | MouseOverEventType (Maybe EventType)
     | KeyUp Key.Key
 
 

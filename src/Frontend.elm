@@ -63,12 +63,14 @@ init url key =
       , size = 200
       , dateHidden = True
       , mouseOver = False
+      , defaultEventType = EventTypeA
       , schedule = { schedule = Dict.empty, lastChanged = Time.millisToPosix 0 }
       , scheduleShown = False
       , currentHourInput = ""
       , currentMinutesInput = ""
       , currentDescInput = ""
       , currentPoolnameInput = ""
+      , currentEventType = EventTypeA
       , poolName = ""
       , poolNameShown = False
       , mouseHoveringOver = Nothing
@@ -77,6 +79,7 @@ init url key =
       , deletedEvents = Set.empty
       , addTimeListShown = False
       , hoveringOverIncrement = Nothing
+      , eventTypeListShown = False
       , hoveringOverEventType = Nothing
       }
     , Cmd.batch
@@ -111,6 +114,7 @@ update msg model =
         GotPortMessage rawMessage ->
             case Ports.decodeMsg rawMessage of
                 Ports.GotInitData data ->
+                    --TODO: get defaultEventType from localStorage
                     ( { model
                         | poolName = data.poolName
                         , currentPoolnameInput = data.poolName
@@ -274,8 +278,7 @@ update msg model =
 
                     newSchedule =
                         { schedule
-                          --TODO: Typ übernehmen
-                            | schedule = Dict.insert eventMillis (ScheduleEvent (model.currentDescInput |> String.Extra.clean) EventTypeA) schedule.schedule
+                            | schedule = Dict.insert eventMillis (ScheduleEvent (model.currentDescInput |> String.Extra.clean) model.currentEventType) schedule.schedule
                             , lastChanged = model.time
                         }
                 in
@@ -284,11 +287,25 @@ update msg model =
                     , currentHourInput = ""
                     , currentMinutesInput = ""
                     , currentDescInput = ""
+                    , currentEventType =
+                        if model.currentEventType == IncrementEvent then
+                            model.defaultEventType
+
+                        else
+                            model.currentEventType
+                    , defaultEventType =
+                        if model.currentEventType == IncrementEvent then
+                            model.defaultEventType
+
+                        else
+                            model.currentEventType
                     , eventReadyForAdding = False
                   }
                 , Cmd.batch
                     [ sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
                     , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+
+                    --TODO: Save defaultEventType to localStorage
                     ]
                 )
 
@@ -368,6 +385,7 @@ update msg model =
             ( { model
                 | currentHourInput = timeParts.hour |> String.fromInt
                 , currentMinutesInput = timeParts.minute |> String.fromInt |> String.padLeft 2 '0'
+                , currentEventType = IncrementEvent
                 , addTimeListShown = False
                 , eventReadyForAdding = True
               }
@@ -376,6 +394,24 @@ update msg model =
 
         MouseOverIncrement inc ->
             ( { model | hoveringOverIncrement = inc }
+            , Cmd.none
+            )
+
+        ShowEventTypeList showIt ->
+            ( { model | eventTypeListShown = showIt }
+            , Cmd.none
+            )
+
+        SetEventType tp ->
+            ( { model
+                | currentEventType = tp
+                , eventTypeListShown = False
+              }
+            , Cmd.none
+            )
+
+        MouseOverEventType tp ->
+            ( { model | hoveringOverEventType = tp }
             , Cmd.none
             )
 
@@ -506,12 +542,13 @@ colors =
     }
 
 
-eventColors : EventType -> Color
-eventColors eventType =
+eventTypeColors : EventType -> Color
+eventTypeColors eventType =
     case eventType of
         EventTypeA ->
-            rgb255 187 136 0
+            rgb 0 1 0
 
+        --rgb255 187 136 0
         EventTypeB ->
             rgb255 187 136 0
 
@@ -522,7 +559,8 @@ eventColors eventType =
             rgb255 187 136 0
 
         IncrementEvent ->
-            rgb255 187 136 0
+            -- rgb255 187 136 0
+            rgb 0 0 1
 
 
 maxDescriptionCharacters =
@@ -622,11 +660,12 @@ view model =
                                     , now = model.time
                                     , faceColor = colors.foreground
                                     , handColor = colors.background
+                                    , eventTypeColors = eventTypeColors
                                     }
-                                    |> Clock.withEvents
-                                        (Dict.keys schedule
-                                            |> List.map Time.millisToPosix
-                                        )
+                                    |> Clock.withEvents schedule
+                                    -- (Dict.keys schedule
+                                    --     |> List.map Time.millisToPosix
+                                    -- )
                                     |> Clock.view
                                 )
                         , onPress = Just ScheduleToggled
@@ -775,7 +814,19 @@ viewEvent model ( millis, event ) =
              else
                 [ width fill ]
             )
-            [ el [ alignTop, Font.color colors.schedule ] <|
+            [ let
+                swatchSize =
+                    Rel.size model.size ScheduleFontSize |> round
+              in
+              el
+                [ Border.rounded swatchSize
+                , width <| px swatchSize
+                , height <| px swatchSize
+                , Bg.color <| eventTypeColors event.eventType
+                ]
+                none
+            , el [] <| text "  "
+            , el [ alignTop, Font.color colors.schedule ] <|
                 if timeParts.hour < 10 then
                     text "0"
 
@@ -896,6 +947,40 @@ viewEventEntry model msg inputStyling =
             , label = Input.labelHidden "Description"
             }
         , Input.button
+            [ above <|
+                if model.eventTypeListShown then
+                    viewEventTypeList model
+
+                else
+                    none
+            , Events.onMouseEnter <| ShowEventTypeList True
+            , Events.onMouseLeave <| ShowEventTypeList False
+            ]
+            { onPress =
+                if model.eventTypeListShown then
+                    Nothing
+
+                else
+                    Just <| ShowEventTypeList True
+            , label =
+                let
+                    size =
+                        Rel.size model.size ScheduleFontSize |> round
+                in
+                el
+                    [ paddingXY (round <| Rel.size model.size ButtonPadding) 0
+                    , Font.color colors.disabled
+                    ]
+                <|
+                    el
+                        [ width <| px size
+                        , height <| px size
+                        , Border.rounded size
+                        , Bg.color <| eventTypeColors model.currentEventType
+                        ]
+                        none
+            }
+        , Input.button
             [ Font.color <|
                 if model.eventReadyForAdding then
                     colors.foreground
@@ -973,13 +1058,75 @@ viewAddTimeList model =
             , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
             , moveUp
                 ((size ScheduleFontSize * (List.length options - 1 |> toFloat))
-                    + ((List.length options - 2 |> toFloat) * size AddTimeListSpacing)
-                    + size AddTimeListPadding
+                    + ((List.length options - 2 |> toFloat) * size PopupListSpacing)
+                    + size PopupListPadding
                 )
             , Border.rounded <| round <| size RoundedBorder
             , Font.color colors.foreground
-            , padding <| round <| size AddTimeListPadding
-            , spacing <| round <| size AddTimeListSpacing
+            , padding <| round <| size PopupListPadding
+            , spacing <| round <| size PopupListSpacing
+            , centerX
+            ]
+
+
+viewEventTypeList : Model -> Element FrontendMsg
+viewEventTypeList model =
+    let
+        size =
+            Rel.size model.size
+
+        options =
+            [ EventTypeA, EventTypeB, EventTypeC, EventTypeD ]
+
+        item tp =
+            Input.button
+                [ Events.onMouseEnter <| MouseOverEventType <| Just tp
+                , Events.onMouseLeave <| MouseOverEventType <| Nothing
+                ]
+                { onPress = Just <| SetEventType tp
+                , label =
+                    let
+                        sz =
+                            size ScheduleFontSize |> round
+                    in
+                    el
+                        [ paddingXY (round <| Rel.size model.size ButtonPadding) 0
+                        , Bg.color <|
+                            case model.hoveringOverEventType of
+                                Nothing ->
+                                    rgba 0 0 0 0
+
+                                Just etype ->
+                                    if etype == tp then
+                                        colors.disabled
+
+                                    else
+                                        rgba 0 0 0 0
+                        ]
+                    <|
+                        el
+                            [ width <| px sz
+                            , height <| px sz
+                            , Border.rounded sz
+                            , Bg.color <| eventTypeColors tp
+                            ]
+                            none
+                }
+    in
+    options
+        |> List.map item
+        |> column
+            [ Bg.color <| rgba 0 0 0 0.6
+            , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
+
+            -- , moveUp
+            --     ((size ScheduleFontSize * (List.length options - 1 |> toFloat))
+            --         + ((List.length options - 2 |> toFloat) * size PopupListSpacing)
+            --         + size AddTimeListPadding
+            --     )
+            , Border.rounded <| round <| size RoundedBorder
+            , padding <| round <| size PopupListPadding
+            , spacing <| round <| size PopupListSpacing
             , centerX
             ]
 

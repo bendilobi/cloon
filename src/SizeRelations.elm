@@ -19,9 +19,9 @@ type SizeRelation
     | ButtonPadding
     | InputFieldPaddingY
     | InputFieldUnderline
-    | AddTimeListSpacing
+    | PopupListSpacing
     | AddTimeListFont
-    | AddTimeListPadding
+    | PopupListPadding
     | RoundedBorder
 
 
@@ -79,14 +79,14 @@ size baseSize sizeRelation =
             InputFieldUnderline ->
                 0.01
 
-            AddTimeListSpacing ->
-                0.01
+            PopupListSpacing ->
+                0.02
 
             AddTimeListFont ->
                 0.045
 
-            AddTimeListPadding ->
-                0.015
+            PopupListPadding ->
+                0.02
 
             RoundedBorder ->
                 0.03
