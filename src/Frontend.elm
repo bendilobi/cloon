@@ -11,7 +11,7 @@ import Element.Background as Bg
 import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
-import Element.Input as Input exposing (focusedOnLoad)
+import Element.Input as Input
 import FeatherIcons
 import Html exposing (Html)
 import Html.Attributes
@@ -77,6 +77,7 @@ init url key =
       , deletedEvents = Set.empty
       , addTimeListShown = False
       , hoveringOverIncrement = Nothing
+      , hoveringOverEventType = Nothing
       }
     , Cmd.batch
         [ Task.perform AdjustTimeZone Time.here
@@ -273,7 +274,8 @@ update msg model =
 
                     newSchedule =
                         { schedule
-                            | schedule = Dict.insert eventMillis (model.currentDescInput |> String.Extra.clean) schedule.schedule
+                          --TODO: Typ übernehmen
+                            | schedule = Dict.insert eventMillis (ScheduleEvent (model.currentDescInput |> String.Extra.clean) EventTypeA) schedule.schedule
                             , lastChanged = model.time
                         }
                 in
@@ -380,19 +382,17 @@ update msg model =
         KeyUp key ->
             case key of
                 Key.Escape ->
-                    if model.scheduleShown then
-                        toggleSchedule model
+                    toggleSchedule model
 
-                    else
-                        ( model, Cmd.none )
-
-                Key.Enter ->
-                    if model.scheduleShown then
-                        ( model, Cmd.none )
-
-                    else
-                        toggleSchedule model
-
+                --     if model.scheduleShown then
+                --         toggleSchedule model
+                --     else
+                --         ( model, Cmd.none )
+                -- Key.Enter ->
+                --     if model.scheduleShown then
+                --         ( model, Cmd.none )
+                --     else
+                --         toggleSchedule model
                 _ ->
                     ( model, Cmd.none )
 
@@ -506,6 +506,25 @@ colors =
     }
 
 
+eventColors : EventType -> Color
+eventColors eventType =
+    case eventType of
+        EventTypeA ->
+            rgb255 187 136 0
+
+        EventTypeB ->
+            rgb255 187 136 0
+
+        EventTypeC ->
+            rgb255 187 136 0
+
+        EventTypeD ->
+            rgb255 187 136 0
+
+        IncrementEvent ->
+            rgb255 187 136 0
+
+
 maxDescriptionCharacters =
     40
 
@@ -531,10 +550,9 @@ view model =
             , htmlAttribute <| Html.Attributes.autocomplete False
             ]
 
-        inputAttributes =
-            onEnter AddEventPressed
-                :: inputStyling
-
+        -- inputAttributes =
+        --     onEnter AddEventPressed
+        --         :: inputStyling
         schedule =
             model.schedule.schedule
     in
@@ -694,131 +712,7 @@ view model =
                             |> Dict.toList
                             |> List.map (viewEvent model)
                         )
-                    , el
-                        [ width fill
-                        , above <|
-                            let
-                                focusHandlingAttrs =
-                                    [ Events.onFocus <| EventInputFocused True
-                                    , Events.onLoseFocus <| EventInputFocused False
-                                    ]
-                            in
-                            row
-                                {- Event entry fields -}
-                                [ width fill
-                                , spacing 0
-                                , Bg.color <| rgba 0 0 0 1 --0.6
-
-                                -- , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
-                                , paddingXY (round <| Rel.size model.size SchedulePadding * 0.2)
-                                    (round <| Rel.size model.size EventInputPaddingY)
-                                , Font.size <| round <| Rel.size model.size ScheduleFontSize
-                                ]
-                                [ Input.button
-                                    [ inFront <|
-                                        if model.addTimeListShown then
-                                            viewAddTimeList model
-
-                                        else
-                                            none
-                                    , Events.onMouseEnter <| ShowTimeList True
-                                    , Events.onMouseLeave <| ShowTimeList False
-                                    ]
-                                    { onPress =
-                                        if model.addTimeListShown then
-                                            Nothing
-
-                                        else
-                                            Just <| ShowTimeList True
-                                    , label =
-                                        el
-                                            [ paddingXY (round <| Rel.size model.size ButtonPadding) 0
-                                            , Font.color colors.disabled
-                                            ]
-                                        <|
-                                            (FeatherIcons.plus
-                                                |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
-                                                |> FeatherIcons.toHtml []
-                                                |> html
-                                            )
-                                    }
-                                , Input.text
-                                    (inputAttributes
-                                        ++ focusHandlingAttrs
-                                        ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
-                                           , Font.alignRight
-                                           , htmlAttribute <| Html.Attributes.id ids.hoursInput
-                                           ]
-                                    )
-                                    { onChange = HourInputChanged
-                                    , text = model.currentHourInput
-                                    , placeholder = Nothing
-                                    , label = Input.labelHidden "Hours"
-                                    }
-                                , el
-                                    (inputAttributes
-                                        ++ [ Font.color <|
-                                                if model.eventInputFocused then
-                                                    colors.foreground
-
-                                                else
-                                                    colors.disabled
-                                           , Border.color <| rgba 0 0 0 0
-                                           ]
-                                    )
-                                  <|
-                                    text ":"
-                                , Input.text
-                                    (inputAttributes
-                                        ++ focusHandlingAttrs
-                                        ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
-                                           , Font.alignLeft
-                                           , htmlAttribute <| Html.Attributes.id ids.minutesInput
-                                           ]
-                                    )
-                                    { onChange = MinutesInputChanged
-                                    , text = model.currentMinutesInput
-                                    , placeholder = Nothing
-                                    , label = Input.labelHidden "Minutes"
-                                    }
-                                , el [ width <| px <| round <| Rel.size model.size ScheduleLineSpacing ] none
-                                , Input.text
-                                    (inputAttributes
-                                        ++ focusHandlingAttrs
-                                        ++ [ width fill
-                                           , htmlAttribute <| Html.Attributes.id ids.descInput
-                                           ]
-                                    )
-                                    { onChange = DescInputChanged
-                                    , text = model.currentDescInput
-                                    , placeholder = Nothing
-                                    , label = Input.labelHidden "Description"
-                                    }
-                                , Input.button
-                                    [ Font.color <|
-                                        if model.eventReadyForAdding then
-                                            colors.foreground
-
-                                        else
-                                            colors.disabled
-                                    ]
-                                    { onPress =
-                                        if model.eventReadyForAdding then
-                                            Just AddEventPressed
-
-                                        else
-                                            Nothing
-                                    , label =
-                                        el [ paddingXY (round <| Rel.size model.size ButtonPadding) 0 ] <|
-                                            (FeatherIcons.cornerDownLeft
-                                                |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
-                                                |> FeatherIcons.toHtml []
-                                                |> html
-                                            )
-                                    }
-                                ]
-                        ]
-                        none
+                    , viewEventEntry model AddEventPressed inputStyling
                     ]
 
               else
@@ -841,6 +735,189 @@ onEnter msg =
                     )
             )
         )
+
+
+viewEvent : Model -> ( Int, ScheduleEvent ) -> Element FrontendMsg
+viewEvent model ( millis, event ) =
+    let
+        timeParts =
+            Time.millisToPosix millis
+                |> Time.Extra.posixToParts model.zone
+
+        deleteButtonLabel =
+            el
+                [ paddingEach { right = Rel.size model.size ScheduleFontSize |> round, left = 0, top = 0, bottom = 0 }
+                , transparent <| model.mouseHoveringOver /= Just millis
+                ]
+            <|
+                -- text "x"
+                ((if Set.member millis model.deletedEvents then
+                    FeatherIcons.rotateCcw
+
+                  else
+                    FeatherIcons.delete
+                 )
+                    |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
+                    |> FeatherIcons.toHtml []
+                    |> html
+                )
+    in
+    row
+        [ spacing <| round <| Rel.size model.size ScheduleLineSpacing
+        , Events.onMouseEnter <| MouseEntered <| Just millis
+        , Events.onMouseLeave <| MouseEntered Nothing
+        , width fill
+        ]
+        [ row
+            (if Set.member millis model.deletedEvents then
+                [ width fill, Font.strike ]
+
+             else
+                [ width fill ]
+            )
+            [ el [ alignTop, Font.color colors.schedule ] <|
+                if timeParts.hour < 10 then
+                    text "0"
+
+                else
+                    none
+            , el [ alignTop ] <|
+                text <|
+                    (timeParts.hour |> String.fromInt)
+                        ++ ":"
+                        ++ (timeParts.minute |> String.fromInt |> String.padLeft 2 '0')
+                        ++ "  "
+            , paragraph [ width fill, alignTop ] [ text event.name ]
+            ]
+        , if model.mouseHoveringOver == Just millis then
+            Input.button []
+                { onPress = Just <| DeleteEventPressed millis
+                , label = deleteButtonLabel
+                }
+
+          else
+            deleteButtonLabel
+        ]
+
+
+viewEventEntry : Model -> FrontendMsg -> List (Attribute FrontendMsg) -> Element FrontendMsg
+viewEventEntry model msg inputStyling =
+    let
+        inputAttributes =
+            inputStyling
+                ++ [ Events.onFocus <| EventInputFocused True
+                   , Events.onLoseFocus <| EventInputFocused False
+                   , onEnter msg
+                   ]
+    in
+    row
+        [ width fill
+        , spacing 0
+        , Bg.color <| rgba 0 0 0 1
+        , paddingXY (round <| Rel.size model.size SchedulePadding * 0.2)
+            (round <| Rel.size model.size EventInputPaddingY)
+        , Font.size <| round <| Rel.size model.size ScheduleFontSize
+        ]
+        [ Input.button
+            [ inFront <|
+                if model.addTimeListShown then
+                    viewAddTimeList model
+
+                else
+                    none
+            , Events.onMouseEnter <| ShowTimeList True
+            , Events.onMouseLeave <| ShowTimeList False
+            ]
+            { onPress =
+                if model.addTimeListShown then
+                    Nothing
+
+                else
+                    Just <| ShowTimeList True
+            , label =
+                el
+                    [ paddingXY (round <| Rel.size model.size ButtonPadding) 0
+                    , Font.color colors.disabled
+                    ]
+                <|
+                    (FeatherIcons.plus
+                        |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
+                        |> FeatherIcons.toHtml []
+                        |> html
+                    )
+            }
+        , Input.text
+            (inputAttributes
+                ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
+                   , Font.alignRight
+                   , htmlAttribute <| Html.Attributes.id ids.hoursInput
+                   ]
+            )
+            { onChange = HourInputChanged
+            , text = model.currentHourInput
+            , placeholder = Nothing
+            , label = Input.labelHidden "Hours"
+            }
+        , el
+            (inputAttributes
+                ++ [ Font.color <|
+                        if model.eventInputFocused then
+                            colors.foreground
+
+                        else
+                            colors.disabled
+                   , Border.color <| rgba 0 0 0 0
+                   ]
+            )
+          <|
+            text ":"
+        , Input.text
+            (inputAttributes
+                ++ [ width <| px <| round <| Rel.size model.size ScheduleFontSize * 1.4
+                   , Font.alignLeft
+                   , htmlAttribute <| Html.Attributes.id ids.minutesInput
+                   ]
+            )
+            { onChange = MinutesInputChanged
+            , text = model.currentMinutesInput
+            , placeholder = Nothing
+            , label = Input.labelHidden "Minutes"
+            }
+        , el [ width <| px <| round <| Rel.size model.size ScheduleLineSpacing ] none
+        , Input.text
+            (inputAttributes
+                ++ [ width fill
+                   , htmlAttribute <| Html.Attributes.id ids.descInput
+                   ]
+            )
+            { onChange = DescInputChanged
+            , text = model.currentDescInput
+            , placeholder = Nothing
+            , label = Input.labelHidden "Description"
+            }
+        , Input.button
+            [ Font.color <|
+                if model.eventReadyForAdding then
+                    colors.foreground
+
+                else
+                    colors.disabled
+            ]
+            { onPress =
+                if model.eventReadyForAdding then
+                    Just AddEventPressed
+
+                else
+                    Nothing
+            , label =
+                el [ paddingXY (round <| Rel.size model.size ButtonPadding) 0 ] <|
+                    (FeatherIcons.cornerDownLeft
+                        |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
+                        |> FeatherIcons.toHtml []
+                        |> html
+                    )
+            }
+        ]
 
 
 viewAddTimeList : Model -> Element FrontendMsg
@@ -905,69 +982,6 @@ viewAddTimeList model =
             , spacing <| round <| size AddTimeListSpacing
             , centerX
             ]
-
-
-viewEvent : Model -> ( Int, String ) -> Element FrontendMsg
-viewEvent model ( millis, description ) =
-    let
-        timeParts =
-            Time.millisToPosix millis
-                |> Time.Extra.posixToParts model.zone
-
-        deleteButtonLabel =
-            el
-                [ paddingEach { right = Rel.size model.size ScheduleFontSize |> round, left = 0, top = 0, bottom = 0 }
-                , transparent <| model.mouseHoveringOver /= Just millis
-                ]
-            <|
-                -- text "x"
-                ((if Set.member millis model.deletedEvents then
-                    FeatherIcons.rotateCcw
-
-                  else
-                    FeatherIcons.delete
-                 )
-                    |> FeatherIcons.withSize (Rel.size model.size ScheduleFontSize)
-                    |> FeatherIcons.toHtml []
-                    |> html
-                )
-    in
-    row
-        [ spacing <| round <| Rel.size model.size ScheduleLineSpacing
-        , Events.onMouseEnter <| MouseEntered <| Just millis
-        , Events.onMouseLeave <| MouseEntered Nothing
-        , width fill
-        ]
-        [ row
-            (if Set.member millis model.deletedEvents then
-                [ width fill, Font.strike ]
-
-             else
-                [ width fill ]
-            )
-            [ el [ alignTop, Font.color colors.schedule ] <|
-                if timeParts.hour < 10 then
-                    text "0"
-
-                else
-                    none
-            , el [ alignTop ] <|
-                text <|
-                    (timeParts.hour |> String.fromInt)
-                        ++ ":"
-                        ++ (timeParts.minute |> String.fromInt |> String.padLeft 2 '0')
-                        ++ "  "
-            , paragraph [ width fill, alignTop ] [ text description ]
-            ]
-        , if model.mouseHoveringOver == Just millis then
-            Input.button []
-                { onPress = Just <| DeleteEventPressed millis
-                , label = deleteButtonLabel
-                }
-
-          else
-            deleteButtonLabel
-        ]
 
 
 viewDate : Model -> Element msg

@@ -12,8 +12,14 @@ import Url exposing (Url)
 
 
 type alias Schedule =
-    { schedule : Dict Int String
+    { schedule : Dict Int ScheduleEvent
     , lastChanged : Time.Posix
+    }
+
+
+type alias ScheduleEvent =
+    { name : String
+    , eventType : EventType
     }
 
 
@@ -22,6 +28,14 @@ type TimeIncrement
     | Thirty
     | Sixty
     | Ninety
+
+
+type EventType
+    = EventTypeA
+    | EventTypeB
+    | EventTypeC
+    | EventTypeD
+    | IncrementEvent
 
 
 type alias FrontendModel =
@@ -46,6 +60,7 @@ type alias FrontendModel =
     , deletedEvents : Set Int
     , addTimeListShown : Bool
     , hoveringOverIncrement : Maybe TimeIncrement
+    , hoveringOverEventType : Maybe EventType
     }
 
 
