@@ -38,6 +38,25 @@ type EventType
     | IncrementEvent
 
 
+eventTypeToString : EventType -> String
+eventTypeToString e =
+    case e of
+        EventTypeA ->
+            "A"
+
+        EventTypeB ->
+            "B"
+
+        EventTypeC ->
+            "C"
+
+        EventTypeD ->
+            "D"
+
+        IncrementEvent ->
+            "X"
+
+
 type alias FrontendModel =
     { key : Key
     , version : String

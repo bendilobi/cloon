@@ -114,10 +114,11 @@ update msg model =
         GotPortMessage rawMessage ->
             case Ports.decodeMsg rawMessage of
                 Ports.GotInitData data ->
-                    --TODO: get defaultEventType from localStorage
                     ( { model
                         | poolName = data.poolName
                         , currentPoolnameInput = data.poolName
+                        , defaultEventType = data.defaultEventType
+                        , currentEventType = data.defaultEventType
                         , version = data.version
                       }
                     , sendToBackend <| JoinPool data.poolName model.schedule model.time
@@ -304,8 +305,6 @@ update msg model =
                 , Cmd.batch
                     [ sendToBackend <| ScheduleChanged model.poolName newSchedule model.time
                     , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
-
-                    --TODO: Save defaultEventType to localStorage
                     ]
                 )
 
@@ -407,7 +406,10 @@ update msg model =
                 | currentEventType = tp
                 , eventTypeListShown = False
               }
-            , Cmd.none
+            , Cmd.batch
+                [ Ports.toJs { tag = "StoreDefaultEventType", data = Json.Encode.string <| eventTypeToString tp }
+                , Browser.Dom.focus ids.descInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+                ]
             )
 
         MouseOverEventType tp ->
@@ -420,15 +422,6 @@ update msg model =
                 Key.Escape ->
                     toggleSchedule model
 
-                --     if model.scheduleShown then
-                --         toggleSchedule model
-                --     else
-                --         ( model, Cmd.none )
-                -- Key.Enter ->
-                --     if model.scheduleShown then
-                --         ( model, Cmd.none )
-                --     else
-                --         toggleSchedule model
                 _ ->
                     ( model, Cmd.none )
 
@@ -483,13 +476,6 @@ toggleSchedule model =
             , currentMinutesInput = ""
             , currentDescInput = ""
           }
-          -- , Cmd.batch
-          --     [ if Dict.size pastEvents > 0 then
-          --         sendToBackend <| ScheduleChanged model.poolName cleanedSchedule model.time
-          --       else
-          --         Cmd.none
-          --     , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
-          --     ]
         , Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
         )
 
@@ -546,21 +532,19 @@ eventTypeColors : EventType -> Color
 eventTypeColors eventType =
     case eventType of
         EventTypeA ->
-            rgb 0 1 0
-
-        --rgb255 187 136 0
-        EventTypeB ->
             rgb255 187 136 0
+
+        EventTypeB ->
+            rgb255 0 187 6
 
         EventTypeC ->
-            rgb255 187 136 0
+            rgb255 0 162 187
 
         EventTypeD ->
-            rgb255 187 136 0
+            rgb255 187 62 0
 
         IncrementEvent ->
-            -- rgb255 187 136 0
-            rgb 0 0 1
+            rgb255 159 0 187
 
 
 maxDescriptionCharacters =

@@ -2,6 +2,7 @@ port module Ports exposing (InitData, ToElm(..), decodeMsg, toElm, toJs)
 
 import Json.Decode
 import Json.Encode
+import Types exposing (EventType(..), eventTypeToString)
 
 
 type ToElm
@@ -12,6 +13,7 @@ type ToElm
 
 type alias InitData =
     { poolName : String
+    , defaultEventType : EventType
     , version : String
     }
 
@@ -51,16 +53,40 @@ port toJs : { tag : String, data : Json.Encode.Value } -> Cmd msg
 initDataDecoder : Json.Decode.Decoder InitData
 initDataDecoder =
     let
+        eventTypeFromString : String -> Json.Decode.Decoder EventType
+        eventTypeFromString str =
+            Json.Decode.succeed <|
+                if str == eventTypeToString EventTypeB then
+                    EventTypeB
+
+                else if str == eventTypeToString EventTypeC then
+                    EventTypeC
+
+                else if str == eventTypeToString EventTypeD then
+                    EventTypeD
+
+                else if str == eventTypeToString IncrementEvent then
+                    IncrementEvent
+
+                else
+                    EventTypeA
+
         poolNameDecoder : Json.Decode.Decoder String
         poolNameDecoder =
             Json.Decode.field "poolName" Json.Decode.string
+
+        defaultEventTypeDecoder : Json.Decode.Decoder EventType
+        defaultEventTypeDecoder =
+            Json.Decode.field "defaultEventType" Json.Decode.string
+                |> Json.Decode.andThen eventTypeFromString
 
         versionDecoder : Json.Decode.Decoder String
         versionDecoder =
             Json.Decode.field "version" Json.Decode.string
     in
     Json.Decode.field "data"
-        (Json.Decode.map2 InitData
+        (Json.Decode.map3 InitData
             poolNameDecoder
+            defaultEventTypeDecoder
             versionDecoder
         )

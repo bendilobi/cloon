@@ -1,7 +1,8 @@
-const version = "v1";
+const version = "v2";
 const TO_JS_PORT = "toJs";
 const TO_ELM_PORT = "toElm";
 const SESSION_POOL_NAME_KEY = "sessionPoolName";
+const DEFAULT_EVENT_TYPE = "defaultEventType";
 
 exports.init = async function (app) {
   // Initial load of data
@@ -9,12 +10,15 @@ exports.init = async function (app) {
 
     const sessionPoolNameStored = localStorage.getItem(SESSION_POOL_NAME_KEY);
     const sessionPoolName = sessionPoolNameStored ? JSON.parse(sessionPoolNameStored) : null;
+    const defaultEventTypeStored = localStorage.getItem(DEFAULT_EVENT_TYPE);
+    const defaultEventType = defaultEventTypeStored ? JSON.parse(defaultEventTypeStored) : null;
 
     // Create the message object
     const message = {
       tag: "InitData",
       data: {
         poolName: sessionPoolName,
+        defaultEventType: defaultEventType,
         version: version,
       },
     };
@@ -34,10 +38,13 @@ exports.init = async function (app) {
       console.error("fromElm event is missing a tag", event);
       return;
     }
-
+    
     switch (event.tag) {
-      case "StoreSessionPoolName":
+      case 'StoreSessionPoolName':
         localStorage.setItem(SESSION_POOL_NAME_KEY, JSON.stringify(event.data));
+        break;
+      case 'StoreDefaultEventType':
+        localStorage.setItem(DEFAULT_EVENT_TYPE, JSON.stringify(event.data));
         break;
       default:
         console.log(`fromElm event of tag ${event.tag} not handled`, event);
