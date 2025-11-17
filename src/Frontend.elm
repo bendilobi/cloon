@@ -444,6 +444,7 @@ toggleSchedule model =
             | scheduleShown = not model.scheduleShown
             , schedule = cleanedSchedule
             , deletedEvents = Set.empty
+            , currentEventType = model.defaultEventType
           }
         , if Set.isEmpty model.deletedEvents then
             Cmd.none
