@@ -142,13 +142,11 @@ update msg model =
             )
 
         ViewportReceived { viewport } ->
-            -- ( { model | relSize = Rel.size <| Basics.min viewport.width viewport.height }
             ( { model | size = Basics.min viewport.width viewport.height }
             , Cmd.none
             )
 
         Resized width height ->
-            -- ( { model | relSize = Rel.size <| toFloat <| Basics.min width height }
             ( { model | size = toFloat <| Basics.min width height }
             , Cmd.none
             )
@@ -294,12 +292,12 @@ update msg model =
 
                         else
                             model.currentEventType
-                    , defaultEventType =
-                        if model.currentEventType == IncrementEvent then
-                            model.defaultEventType
 
-                        else
-                            model.currentEventType
+                    -- , defaultEventType =
+                    --     if model.currentEventType == IncrementEvent then
+                    --         model.defaultEventType
+                    --     else
+                    --         model.currentEventType
                     , eventReadyForAdding = False
                   }
                 , Cmd.batch
@@ -405,10 +403,20 @@ update msg model =
             ( { model
                 | currentEventType = tp
                 , eventTypeListShown = False
+                , defaultEventType =
+                    if tp == IncrementEvent then
+                        model.defaultEventType
+
+                    else
+                        tp
               }
             , Cmd.batch
                 [ Ports.toJs { tag = "StoreDefaultEventType", data = Json.Encode.string <| eventTypeToString tp }
-                , Browser.Dom.focus ids.descInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+                , if model.eventReadyForAdding then
+                    Browser.Dom.focus ids.descInput |> Task.attempt (\_ -> NoOpFrontendMsg)
+
+                  else
+                    Browser.Dom.focus ids.hoursInput |> Task.attempt (\_ -> NoOpFrontendMsg)
                 ]
             )
 
@@ -573,9 +581,6 @@ view model =
             , htmlAttribute <| Html.Attributes.autocomplete False
             ]
 
-        -- inputAttributes =
-        --     onEnter AddEventPressed
-        --         :: inputStyling
         schedule =
             model.schedule.schedule
     in
@@ -648,9 +653,6 @@ view model =
                                     , eventTypeColors = eventTypeColors
                                     }
                                     |> Clock.withEvents schedule
-                                    -- (Dict.keys schedule
-                                    --     |> List.map Time.millisToPosix
-                                    -- )
                                     |> Clock.view
                                 )
                         , onPress = Just ScheduleToggled
@@ -774,7 +776,6 @@ viewEvent model ( millis, event ) =
                 , transparent <| model.mouseHoveringOver /= Just millis
                 ]
             <|
-                -- text "x"
                 ((if Set.member millis model.deletedEvents then
                     FeatherIcons.rotateCcw
 
@@ -1103,12 +1104,6 @@ viewEventTypeList model =
         |> column
             [ Bg.color <| rgba 0 0 0 0.6
             , htmlAttribute <| Html.Attributes.attribute "style" "backdrop-filter: blur(10px);"
-
-            -- , moveUp
-            --     ((size ScheduleFontSize * (List.length options - 1 |> toFloat))
-            --         + ((List.length options - 2 |> toFloat) * size PopupListSpacing)
-            --         + size AddTimeListPadding
-            --     )
             , Border.rounded <| round <| size RoundedBorder
             , padding <| round <| size PopupListPadding
             , spacing <| round <| size PopupListSpacing
